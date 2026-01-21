@@ -1,0 +1,121 @@
+import { Component, Input } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { TranslateModule } from '@ngx-translate/core';
+
+@Component({
+  selector: 'app-summary-card',
+  standalone: true,
+  imports: [MatCardModule, MatDividerModule, MatProgressBarModule, TranslateModule],
+  templateUrl: './summary-card.component.html',
+  styles: [
+    `
+      .summary-card {
+        padding: 1.5rem;
+        background: #ffffffcc;
+        backdrop-filter: blur(8px);
+        width: 100%;
+      }
+
+      .summary-layout {
+        display: grid;
+        grid-template-columns: 200px minmax(0, 1fr);
+        gap: 1.5rem;
+        align-items: stretch;
+      }
+
+      .summary-content {
+        display: grid;
+        gap: 0.5rem;
+        min-width: 0;
+      }
+
+      .summary-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        padding: 0.75rem 0;
+      }
+
+      .level-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        padding-bottom: 0.5rem;
+        align-items: center;
+      }
+
+      .level-meta {
+        text-align: right;
+      }
+
+      .summary-label {
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 0.7rem;
+        margin: 0 0 0.35rem;
+        color: rgba(19, 70, 134, 0.7);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .summary-value {
+        font-size: 1.6rem;
+        margin: 0;
+        font-weight: 600;
+      }
+
+      .summary-value.small {
+        font-size: 1.1rem;
+      }
+
+      .avatar-lg {
+        border-radius: 28px;
+        background: var(--app-cream);
+        box-shadow: 0 16px 28px rgba(19, 70, 134, 0.16);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 0.75rem;
+      }
+
+      .avatar-lg img {
+        width: 100%;
+        height: auto;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      mat-progress-bar {
+        margin: 0.75rem 0 0.25rem;
+      }
+
+      @media (max-width: 720px) {
+        .summary-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .avatar-lg {
+          max-width: 200px;
+          margin: 0 auto;
+        }
+      }
+    `
+  ]
+})
+export class SummaryCardComponent {
+  @Input({ required: true }) avatarSrc = '';
+  @Input({ required: true }) level = 1;
+  @Input({ required: true }) xpToNext = 0;
+  @Input({ required: true }) progressPercent = 0;
+  @Input({ required: true }) earned = 0;
+  @Input({ required: true }) spent = 0;
+  @Input({ required: true }) cycleLabel = '';
+  @Input({ required: true }) cycleEarned = 0;
+  @Input({ required: true }) cycleRangeLabel = '';
+  @Input() previousCycleEarned: number | null = null;
+  @Input() previousCycleLabel = '';
+}

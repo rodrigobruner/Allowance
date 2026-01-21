@@ -22,32 +22,7 @@ export type SettingsDialogData = Settings;
     MatButtonModule,
     TranslateModule
   ],
-  template: `
-    <h2 mat-dialog-title>{{ 'settingsDialog.title' | translate }}</h2>
-    <mat-dialog-content>
-      <form [formGroup]="form" class="dialog-form">
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'settingsDialog.cycle' | translate }}</mat-label>
-          <mat-select formControlName="cycleType">
-            <mat-option value="weekly">{{ 'cycle.weekly' | translate }}</mat-option>
-            <mat-option value="biweekly">{{ 'cycle.biweekly' | translate }}</mat-option>
-            <mat-option value="monthly">{{ 'cycle.monthly' | translate }}</mat-option>
-            <mat-option value="yearly">{{ 'cycle.yearly' | translate }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'settingsDialog.start' | translate }}</mat-label>
-          <input matInput type="date" formControlName="cycleStartDate" />
-        </mat-form-field>
-      </form>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="close()">{{ 'settingsDialog.cancel' | translate }}</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="form.invalid">
-        {{ 'settingsDialog.save' | translate }}
-      </button>
-    </mat-dialog-actions>
-  `,
+  templateUrl: './settings-dialog.component.html',
   styles: [
     `
       .dialog-form {

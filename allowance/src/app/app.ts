@@ -1,20 +1,15 @@
-import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { AllowanceDbService, Completion, Reward, Settings, Task } from './allowance-db.service';
-import { SettingsDialogComponent } from './settings-dialog';
-import { TaskDialogComponent, TaskDialogResult } from './task-dialog';
-import { RewardDialogComponent, RewardDialogResult } from './reward-dialog';
+import { SettingsDialogComponent } from './components/settings-dialog/settings-dialog.component';
+import { TaskDialogComponent, TaskDialogResult } from './components/task-dialog/task-dialog.component';
+import { RewardDialogComponent, RewardDialogResult } from './components/reward-dialog/reward-dialog.component';
 import { firstValueFrom } from 'rxjs';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateService } from '@ngx-translate/core';
+import { TopbarComponent } from './components/topbar/topbar.component';
+import { SummaryCardComponent } from './components/summary-card/summary-card.component';
+import { TasksPanelComponent } from './components/tasks-panel/tasks-panel.component';
+import { RewardsPanelComponent } from './components/rewards-panel/rewards-panel.component';
 
 const currentDateKey = (): string => {
   const now = new Date();
@@ -27,17 +22,11 @@ const currentDateKey = (): string => {
 @Component({
   selector: 'app-root',
   imports: [
-    CommonModule,
-    MatToolbarModule,
-    MatButtonModule,
-    MatCardModule,
-    MatDividerModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatIconModule,
-    MatProgressBarModule,
-    TranslateModule
+    TopbarComponent,
+    SummaryCardComponent,
+    TasksPanelComponent,
+    RewardsPanelComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'

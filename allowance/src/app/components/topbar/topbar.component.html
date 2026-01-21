@@ -1,0 +1,22 @@
+<mat-toolbar color="primary" class="topbar">
+  <div class="brand">
+    <span class="material-icons">savings</span>
+    <span class="brand-title">{{ 'app.title' | translate }}</span>
+  </div>
+  <div class="spacer"></div>
+  <button
+    mat-icon-button
+    (click)="settingsClick.emit()"
+    [attr.aria-label]="'app.settings' | translate"
+  >
+    <span class="material-icons">settings</span>
+  </button>
+  <div class="lang-switch">
+    <button mat-button (click)="languageChange.emit('en')">EN</button>
+    <button mat-button (click)="languageChange.emit('pt')">PT</button>
+  </div>
+  <div class="balance">
+    <span class="label">{{ 'summary.xpAvailable' | translate }}</span>
+    <span class="value">{{ balance }} XP</span>
+  </div>
+</mat-toolbar>

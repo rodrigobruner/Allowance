@@ -1,0 +1,41 @@
+<mat-card class="panel">
+  <div class="panel-header">
+    <h2>{{ 'tasks.title' | translate }}</h2>
+    <button mat-fab color="primary" class="add-fab" (click)="addTask.emit()">
+      <span class="material-icons">add</span>
+    </button>
+  </div>
+
+  <div class="list-header">
+    <span>{{ 'tasks.activity' | translate }}</span>
+    <span>{{ 'tasks.xp' | translate }}</span>
+    <span>{{ 'tasks.status' | translate }}</span>
+  </div>
+  @if (tasks.length === 0) {
+    <p class="empty-state">{{ 'tasks.empty' | translate }}</p>
+  }
+  @for (task of tasks; track task.id) {
+    <div class="item-row">
+      <div class="item-main">
+        <button class="item-title" type="button" (click)="toggleTask.emit(task)">
+          {{ task.title }}
+        </button>
+        <button
+          class="check-toggle"
+          [class.done]="todayDoneIds.has(task.id)"
+          (click)="toggleTask.emit(task)"
+          type="button"
+        >
+          <span class="material-icons">check</span>
+        </button>
+      </div>
+      <span>{{ task.points }} XP</span>
+      <span class="status" [class.done]="todayDoneIds.has(task.id)">
+        {{ todayDoneIds.has(task.id) ? ('tasks.done' | translate) : ('tasks.available' | translate) }}
+      </span>
+      <button mat-icon-button class="danger" (click)="removeTask.emit(task)">
+        <span class="material-icons">delete</span>
+      </button>
+    </div>
+  }
+</mat-card>

@@ -22,27 +22,7 @@ export type TaskDialogResult = {
     MatButtonModule,
     TranslateModule
   ],
-  template: `
-    <h2 mat-dialog-title>{{ 'tasks.add' | translate }}</h2>
-    <mat-dialog-content>
-      <form [formGroup]="form" class="dialog-form">
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'tasks.description' | translate }}</mat-label>
-          <input matInput formControlName="title" [placeholder]="'tasks.placeholder' | translate" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>{{ 'tasks.points' | translate }}</mat-label>
-          <input matInput type="number" formControlName="points" min="1" />
-        </mat-form-field>
-      </form>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="close()">{{ 'settingsDialog.cancel' | translate }}</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="form.invalid">
-        {{ 'tasks.add' | translate }}
-      </button>
-    </mat-dialog-actions>
-  `,
+  templateUrl: './task-dialog.component.html',
   styles: [
     `
       .dialog-form {

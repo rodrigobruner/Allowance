@@ -1,25 +1,8 @@
-<mat-toolbar color="primary" class="topbar">
-  <div class="brand">
-    <span class="material-icons">savings</span>
-    <span class="brand-title">{{ 'app.title' | translate }}</span>
-  </div>
-  <div class="spacer"></div>
-  <button
-    mat-icon-button
-    (click)="openSettings()"
-    [attr.aria-label]="'app.settings' | translate"
-  >
-    <span class="material-icons">settings</span>
-  </button>
-  <div class="lang-switch">
-    <button mat-button (click)="setLanguage('en')">EN</button>
-    <button mat-button (click)="setLanguage('pt')">PT</button>
-  </div>
-  <div class="balance">
-    <span class="label">{{ 'summary.xpAvailable' | translate }}</span>
-    <span class="value">{{ balance() }} XP</span>
-  </div>
-</mat-toolbar>
+<app-topbar
+  [balance]="balance()"
+  (settingsClick)="openSettings()"
+  (languageChange)="setLanguage($event)"
+/>
 
 <main class="page">
   <section class="hero">
@@ -30,153 +13,36 @@
         {{ 'app.subtitle' | translate }}
       </p>
     </div>
-    <mat-card class="summary-card">
-      <div class="summary-layout">
-        <div class="avatar-lg">
-          <img [src]="avatarSrc()" alt="Avatar do nível" />
-        </div>
-        <div class="summary-content">
-          <div class="level-row">
-          <div>
-            <p class="summary-label">{{ 'summary.level' | translate }}</p>
-            <p class="summary-value">{{ 'summary.levelValue' | translate: { level: level() } }}</p>
-          </div>
-          <div class="level-meta">
-            <p class="summary-label">{{ 'summary.nextLevel' | translate }}</p>
-            <p class="summary-value">{{ xpToNext() }} XP</p>
-          </div>
-          </div>
-          <mat-progress-bar
-            color="primary"
-            mode="determinate"
-            [value]="progressPercent()"
-          ></mat-progress-bar>
-          <div class="summary-row">
-            <div>
-              <p class="summary-label">{{ 'summary.xpEarned' | translate }}</p>
-              <p class="summary-value">{{ earned() }} XP</p>
-            </div>
-            <div>
-              <p class="summary-label">{{ 'summary.xpSpent' | translate }}</p>
-              <p class="summary-value">{{ spent() }} XP</p>
-            </div>
-          </div>
-          <mat-divider></mat-divider>
-          <div class="summary-row">
-            <div>
-              <p class="summary-label">
-                {{ 'summary.cycleXp' | translate: { cycle: cycleLabel() } }}
-              </p>
-              <p class="summary-value">{{ cycleEarned() }} XP</p>
-            </div>
-            <div>
-              <p class="summary-label">{{ 'summary.cycleRange' | translate }}</p>
-              <p class="summary-value small">{{ cycleRangeLabel() }}</p>
-            </div>
-          </div>
-          @if (previousCycleEarned() !== null) {
-            <mat-divider></mat-divider>
-            <div class="summary-row">
-              <div>
-                <p class="summary-label">{{ 'summary.previousXp' | translate }}</p>
-                <p class="summary-value">{{ previousCycleEarned() }} XP</p>
-              </div>
-              <div>
-                <p class="summary-label">{{ 'summary.previousRange' | translate }}</p>
-                <p class="summary-value small">{{ previousCycleLabel() }}</p>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    </mat-card>
+    <app-summary-card
+      [avatarSrc]="avatarSrc()"
+      [level]="level()"
+      [xpToNext]="xpToNext()"
+      [progressPercent]="progressPercent()"
+      [earned]="earned()"
+      [spent]="spent()"
+      [cycleLabel]="cycleLabel()"
+      [cycleEarned]="cycleEarned()"
+      [cycleRangeLabel]="cycleRangeLabel()"
+      [previousCycleEarned]="previousCycleEarned()"
+      [previousCycleLabel]="previousCycleLabel()"
+    />
   </section>
 
   <section class="grid">
-    <mat-card class="panel">
-      <div class="panel-header">
-        <h2>{{ 'tasks.title' | translate }}</h2>
-        <button mat-fab color="primary" class="add-fab" (click)="openTaskDialog()">
-          <span class="material-icons">add</span>
-        </button>
-      </div>
+    <app-tasks-panel
+      [tasks]="tasks()"
+      [todayDoneIds]="todayDoneIds()"
+      (addTask)="openTaskDialog()"
+      (toggleTask)="toggleTask($event)"
+      (removeTask)="removeTask($event)"
+    />
 
-      <div class="list-header">
-        <span>{{ 'tasks.activity' | translate }}</span>
-        <span>{{ 'tasks.xp' | translate }}</span>
-        <span>{{ 'tasks.status' | translate }}</span>
-      </div>
-      @if (tasks().length === 0) {
-        <p class="empty-state">{{ 'tasks.empty' | translate }}</p>
-      }
-      @for (task of tasks(); track task.id) {
-        <div class="item-row">
-          <div class="item-main">
-            <button class="item-title" type="button" (click)="toggleTask(task)">
-              {{ task.title }}
-            </button>
-            <button
-              class="check-toggle"
-              [class.done]="todayDoneIds().has(task.id)"
-              (click)="toggleTask(task)"
-              type="button"
-            >
-              <span class="material-icons">
-                check
-              </span>
-            </button>
-          </div>
-          <span>{{ task.points }} XP</span>
-          <span class="status" [class.done]="todayDoneIds().has(task.id)">
-            {{ todayDoneIds().has(task.id) ? ('tasks.done' | translate) : ('tasks.available' | translate) }}
-          </span>
-          <button mat-icon-button class="danger" (click)="removeTask(task)">
-            <span class="material-icons">delete</span>
-          </button>
-        </div>
-      }
-    </mat-card>
-
-    <mat-card class="panel">
-      <div class="panel-header">
-        <h2>{{ 'rewards.title' | translate }}</h2>
-        <button mat-fab color="primary" class="add-fab" (click)="openRewardDialog()">
-          <span class="material-icons">add</span>
-        </button>
-      </div>
-
-      <div class="list-header">
-        <span>{{ 'rewards.name' | translate }}</span>
-        <span>{{ 'tasks.xp' | translate }}</span>
-        <span>{{ 'tasks.status' | translate }}</span>
-      </div>
-      @if (rewards().length === 0) {
-        <p class="empty-state">{{ 'rewards.empty' | translate }}</p>
-      }
-      @for (reward of rewards(); track reward.id) {
-        <div class="item-row">
-          <div class="item-main">
-            <button class="item-title" type="button" (click)="redeemReward(reward)">
-              {{ reward.title }}
-            </button>
-            <button
-              mat-icon-button
-              color="primary"
-              (click)="redeemReward(reward)"
-              [disabled]="!reward.redeemedAt && balance() < reward.cost"
-            >
-              <span class="material-icons">redeem</span>
-            </button>
-          </div>
-          <span>{{ reward.cost }} XP</span>
-          <span class="status" [class.done]="reward.redeemedAt">
-            {{ reward.redeemedAt ? ('rewards.redeemed' | translate) : ('rewards.available' | translate) }}
-          </span>
-          <button mat-icon-button class="danger" (click)="removeReward(reward)">
-            <span class="material-icons">delete</span>
-          </button>
-        </div>
-      }
-    </mat-card>
+    <app-rewards-panel
+      [rewards]="rewards()"
+      [balance]="balance()"
+      (addReward)="openRewardDialog()"
+      (redeemReward)="redeemReward($event)"
+      (removeReward)="removeReward($event)"
+    />
   </section>
 </main>
