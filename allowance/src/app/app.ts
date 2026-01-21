@@ -122,7 +122,12 @@ export class App implements OnInit {
       this.db.getCompletions(),
       this.db.getSettings()
     ]);
-    this.tasks.set(this.sortTasks(tasks));
+    if (tasks.length === 0) {
+      const seeded = await this.seedDefaultTasks();
+      this.tasks.set(this.sortTasks(seeded));
+    } else {
+      this.tasks.set(this.sortTasks(tasks));
+    }
     this.rewards.set(this.sortRewards(rewards));
     this.completions.set(completions);
     if (settings) {
@@ -253,6 +258,49 @@ export class App implements OnInit {
 
   private sortRewards(items: Reward[]): Reward[] {
     return [...items].sort((a, b) => a.cost - b.cost);
+  }
+
+  private async seedDefaultTasks(): Promise<Task[]> {
+    const language = this.translate.currentLang || this.translate.getDefaultLang() || 'en';
+    const defaults = language.startsWith('pt') ? this.defaultTasksPt() : this.defaultTasksEn();
+    const seeded = defaults.map((entry) => ({
+      id: this.db.createId(),
+      title: entry.title,
+      points: entry.points,
+      createdAt: Date.now()
+    }));
+    await Promise.all(seeded.map((task) => this.db.addTask(task)));
+    return seeded;
+  }
+
+  private defaultTasksPt(): Array<{ title: string; points: number }> {
+    return [
+      { title: '🎒 Organizar o material escolar e mochila', points: 1 },
+      { title: '📖 Estudar', points: 3 },
+      { title: '🚂 Guardar os brinquedos', points: 1 },
+      { title: '🛏️ Arrumar a cama', points: 1 },
+      { title: '☕️ Ajudar com a louça e lixo', points: 1 },
+      { title: '🛀 Tomar banho e escovar os dentes', points: 1 },
+      { title: '🙋🏻‍♂️ Ajudar o papai e a mamãe', points: 2 },
+      { title: '😴 Ir para cama no horário', points: 1 },
+      { title: '👍 Outras tarefas de casa', points: 1 },
+      { title: '🍉 Eu experimentei', points: 4 }
+    ];
+  }
+
+  private defaultTasksEn(): Array<{ title: string; points: number }> {
+    return [
+      { title: '🎒 Pack school supplies and backpack', points: 1 },
+      { title: '📖 Study', points: 3 },
+      { title: '🚂 Put away toys', points: 1 },
+      { title: '🛏️ Make the bed', points: 1 },
+      { title: '☕️ Help with dishes and trash', points: 1 },
+      { title: '🛀 Shower and brush teeth', points: 1 },
+      { title: '🙋🏻‍♂️ Help mom and dad', points: 2 },
+      { title: '😴 Go to bed on time', points: 1 },
+      { title: '👍 Other house chores', points: 1 },
+      { title: '🍉 I tried a new food', points: 4 }
+    ];
   }
 
   private getCycleRange(): { start: string; end: string } {
