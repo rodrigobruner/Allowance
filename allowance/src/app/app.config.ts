@@ -13,7 +13,7 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 
-const httpTranslateLoader = (http: HttpClient) => new TranslateHttpLoader(http, '/i18n/', '.json');
+const httpTranslateLoader = (http: HttpClient) => new TranslateHttpLoader(http, 'i18n/', '.json');
 
 export const appConfig: ApplicationConfig = {
   providers: [
