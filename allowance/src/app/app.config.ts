@@ -6,6 +6,7 @@ import {
 } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, HttpClient } from '@angular/common/http';
+import { DOCUMENT } from '@angular/common';
 import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
@@ -13,7 +14,11 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 
-const httpTranslateLoader = (http: HttpClient) => new TranslateHttpLoader(http, 'i18n/', '.json');
+const httpTranslateLoader = (http: HttpClient, document: Document) => {
+  const baseHref = document.querySelector('base')?.getAttribute('href') ?? '/';
+  const normalized = baseHref.endsWith('/') ? baseHref : `${baseHref}/`;
+  return new TranslateHttpLoader(http, `${normalized}i18n/`, '.json');
+};
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,7 +31,7 @@ export const appConfig: ApplicationConfig = {
         loader: {
           provide: TranslateLoader,
           useFactory: httpTranslateLoader,
-          deps: [HttpClient]
+          deps: [HttpClient, DOCUMENT]
         }
       })
     ),
