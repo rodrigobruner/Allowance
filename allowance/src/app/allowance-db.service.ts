@@ -30,6 +30,7 @@ export type Settings = {
   cycleType: 'weekly' | 'biweekly' | 'monthly' | 'yearly';
   cycleStartDate: string;
   language: 'en' | 'pt';
+  levelUpPoints: number;
 };
 
 @Injectable({

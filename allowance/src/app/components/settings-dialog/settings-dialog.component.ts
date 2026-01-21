@@ -5,7 +5,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Settings } from './allowance-db.service';
+import { Settings } from '../../allowance-db.service';
 import { TranslateModule } from '@ngx-translate/core';
 
 export type SettingsDialogData = Settings;
@@ -31,6 +31,15 @@ export type SettingsDialogData = Settings;
         margin-top: 0.5rem;
         min-width: min(360px, 80vw);
       }
+
+      .section-title {
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        color: rgba(19, 70, 134, 0.7);
+        margin-top: 0.25rem;
+      }
     `
   ]
 })
@@ -41,7 +50,8 @@ export class SettingsDialogComponent {
   form = this.formBuilder.group({
     cycleType: ['weekly', Validators.required],
     cycleStartDate: [this.today(), Validators.required],
-    language: ['en', Validators.required]
+    language: ['en', Validators.required],
+    levelUpPoints: [100, [Validators.required, Validators.min(10)]]
   });
 
   setSettings(settings: Settings): void {

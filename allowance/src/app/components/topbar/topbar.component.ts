@@ -57,6 +57,25 @@ import { TranslateModule } from '@ngx-translate/core';
       button[mat-icon-button] {
         margin-right: 0.5rem;
         color: var(--app-cream);
+        background: transparent;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+      }
+
+      .mat-mdc-icon-button {
+        background: transparent;
+        box-shadow: none;
+        border: none;
+      }
+
+      .mat-mdc-icon-button::before,
+      .mat-mdc-icon-button::after {
+        display: none;
+      }
+
+      .mat-mdc-icon-button .mat-mdc-button-touch-target {
+        display: none;
       }
 
     `

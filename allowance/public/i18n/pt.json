@@ -42,10 +42,14 @@
     "redeemed": "Resgatada"
   },
   "settingsDialog": {
-    "title": "Configurar ciclo",
+    "title": "Configurações",
+    "languageSection": "Idioma",
+    "cycleSection": "Ciclo",
+    "levelupSection": "Level-up",
     "cycle": "Ciclo",
     "start": "Início do ciclo",
     "language": "Idioma",
+    "levelUpPoints": "Pontos por nível",
     "cancel": "Cancelar",
     "save": "Salvar"
   },

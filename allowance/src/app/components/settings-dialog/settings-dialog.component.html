@@ -1,6 +1,15 @@
 <h2 mat-dialog-title>{{ 'settingsDialog.title' | translate }}</h2>
 <mat-dialog-content>
   <form [formGroup]="form" class="dialog-form">
+    <div class="section-title">{{ 'settingsDialog.languageSection' | translate }}</div>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'settingsDialog.language' | translate }}</mat-label>
+      <mat-select formControlName="language">
+        <mat-option value="en">English</mat-option>
+        <mat-option value="pt">Português</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <div class="section-title">{{ 'settingsDialog.cycleSection' | translate }}</div>
     <mat-form-field appearance="outline">
       <mat-label>{{ 'settingsDialog.cycle' | translate }}</mat-label>
       <mat-select formControlName="cycleType">
@@ -14,12 +23,10 @@
       <mat-label>{{ 'settingsDialog.start' | translate }}</mat-label>
       <input matInput type="date" formControlName="cycleStartDate" />
     </mat-form-field>
+    <div class="section-title">{{ 'settingsDialog.levelupSection' | translate }}</div>
     <mat-form-field appearance="outline">
-      <mat-label>{{ 'settingsDialog.language' | translate }}</mat-label>
-      <mat-select formControlName="language">
-        <mat-option value="en">English</mat-option>
-        <mat-option value="pt">Português</mat-option>
-      </mat-select>
+      <mat-label>{{ 'settingsDialog.levelUpPoints' | translate }}</mat-label>
+      <input matInput type="number" min="10" formControlName="levelUpPoints" />
     </mat-form-field>
   </form>
 </mat-dialog-content>

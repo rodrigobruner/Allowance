@@ -42,10 +42,14 @@
     "redeemed": "Redeemed"
   },
   "settingsDialog": {
-    "title": "Cycle settings",
+    "title": "Settings",
+    "languageSection": "Language",
+    "cycleSection": "Cycle",
+    "levelupSection": "Level-up",
     "cycle": "Cycle",
     "start": "Cycle start date",
     "language": "Language",
+    "levelUpPoints": "Points per level",
     "cancel": "Cancel",
     "save": "Save"
   },

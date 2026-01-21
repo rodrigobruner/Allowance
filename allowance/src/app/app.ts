@@ -1,11 +1,11 @@
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AllowanceDbService, Completion, Reward, Settings, Task } from './allowance-db.service';
 import { SettingsDialogComponent } from './components/settings-dialog/settings-dialog.component';
 import { TaskDialogComponent, TaskDialogResult } from './components/task-dialog/task-dialog.component';
 import { RewardDialogComponent, RewardDialogResult } from './components/reward-dialog/reward-dialog.component';
 import { firstValueFrom } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TopbarComponent } from './components/topbar/topbar.component';
 import { SummaryCardComponent } from './components/summary-card/summary-card.component';
 import { TasksPanelComponent } from './components/tasks-panel/tasks-panel.component';
@@ -27,7 +27,8 @@ const currentDateKey = (): string => {
     TopbarComponent,
     SummaryCardComponent,
     TasksPanelComponent,
-    RewardsPanelComponent
+    RewardsPanelComponent,
+    TranslateModule
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss'
@@ -40,7 +41,8 @@ export class App implements OnInit {
     id: 'global',
     cycleType: 'weekly',
     cycleStartDate: currentDateKey(),
-    language: 'en'
+    language: 'en',
+    levelUpPoints: 100
   });
 
   earned = computed(() => this.completions().reduce((sum, completion) => sum + completion.points, 0));
@@ -71,15 +73,14 @@ export class App implements OnInit {
     }
     return `${this.formatDate(range.start)} - ${this.formatDate(range.end)}`;
   });
-  level = computed(() => Math.floor(this.earned() / 100) + 1);
-  xpIntoLevel = computed(() => this.earned() % 100);
-  xpToNext = computed(() => 100 - this.xpIntoLevel());
-  progressPercent = computed(() => (this.xpIntoLevel() / 100) * 100);
+  level = computed(() => Math.floor(this.earned() / this.settings().levelUpPoints) + 1);
+  xpIntoLevel = computed(() => this.earned() % this.settings().levelUpPoints);
+  xpToNext = computed(() => this.settings().levelUpPoints - this.xpIntoLevel());
+  progressPercent = computed(() => (this.xpIntoLevel() / this.settings().levelUpPoints) * 100);
   avatarSrc = computed(() => {
     const avatarNumber = '01';
     return `avatar/${avatarNumber}/level-${this.level()}.png`;
   });
-  private lastLevel = signal<number | null>(null);
 
   completedCount = computed(() => this.completions().filter((completion) => completion.date === this.today()).length);
   redeemedCount = computed(() => this.rewards().filter((reward) => reward.redeemedAt).length);
@@ -118,26 +119,11 @@ export class App implements OnInit {
     if (settings) {
       this.settings.set({
         ...settings,
-        language: settings.language ?? 'en'
+        language: settings.language ?? 'en',
+        levelUpPoints: settings.levelUpPoints ?? 100
       });
     }
     this.translate.use(this.settings().language);
-    this.lastLevel.set(this.level());
-
-    effect(() => {
-      const currentLevel = this.level();
-      const previousLevel = this.lastLevel();
-      if (previousLevel === null) {
-        this.lastLevel.set(currentLevel);
-        return;
-      }
-      if (currentLevel > previousLevel) {
-        this.showLevelUp();
-      }
-      if (currentLevel !== previousLevel) {
-        this.lastLevel.set(currentLevel);
-      }
-    });
   }
 
   async addTask(): Promise<void> {
@@ -178,6 +164,8 @@ export class App implements OnInit {
       return;
     }
 
+    const currentEarned = this.earned();
+    const previousLevel = this.level();
     const completion: Completion = {
       id: completionId,
       taskId: task.id,
@@ -186,6 +174,10 @@ export class App implements OnInit {
     };
     await this.db.addCompletion(completion);
     this.completions.update((items) => [completion, ...items]);
+    const nextLevel = Math.floor((currentEarned + task.points) / this.settings().levelUpPoints) + 1;
+    if (nextLevel > previousLevel) {
+      this.showLevelUp();
+    }
   }
 
   async removeTask(task: Task): Promise<void> {
@@ -261,7 +253,9 @@ export class App implements OnInit {
   private showLevelUp(): void {
     this.dialog.open(LevelupDialogComponent, {
       panelClass: 'levelup-dialog',
-      disableClose: true
+      width: '100vw',
+      height: '100vh',
+      maxWidth: '100vw'
     });
   }
 
