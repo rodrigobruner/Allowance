@@ -30,7 +30,6 @@ yarn-error.log
 .history/*
 .claude
 .cursor
-.github
 
 # Miscellaneous
 /.angular/cache
