@@ -23,6 +23,17 @@ jobs:
         run: npm ci
         working-directory: growup
 
+      - name: Validate environment secrets
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "SUPABASE_URL is empty"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "SUPABASE_ANON_KEY is empty"
+            exit 1
+          fi
+
       - name: Write production environment
         run: |
           cat <<'EOF' > growup/src/environments/environment.prod.ts
@@ -32,6 +43,9 @@ jobs:
             supabaseAnonKey: '${{ secrets.SUPABASE_ANON_KEY }}',
           };
           EOF
+
+      - name: Check environment.prod.ts exists
+        run: test -f growup/src/environments/environment.prod.ts
 
       - name: Build
         run: npm run build
