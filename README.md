@@ -1,14 +1,14 @@
-# Allowance
+# GrowUp
 
 ## Business Overview
-**Allowance** is a playful, family‑friendly PWA that turns daily chores into a rewarding experience. Kids complete tasks, earn **XP**, and redeem rewards, while parents track progress and build consistent habits without pressure or penalties. The dashboard keeps everything clear at a glance with **levels, streak‑like progress, and cycle summaries** (weekly, bi‑weekly, monthly, or yearly).
+**GrowUp** is a playful, family‑friendly PWA that turns daily chores into a rewarding experience. Kids complete tasks, earn **XP**, and redeem rewards, while parents track progress and build consistent habits without pressure or penalties. The dashboard keeps everything clear at a glance with **levels, streak‑like progress, and cycle summaries** (weekly, bi‑weekly, monthly, or yearly).
 
 **Why it matters**
 - **Motivates children** with visible progress and level‑ups.
 - **Encourages routine** through daily task availability.
 - **Gives parents clarity** on earned XP, spending, and cycle results.
 
-Demo: https://allowance.bruner.app
+Demo: https://growup.bruner.app
 
 ---
 
@@ -28,8 +28,8 @@ Demo: https://allowance.bruner.app
 ### Run Locally
 ```bash
 # Clone
-git clone https://github.com/rodrigobruner/Allowance.git
-cd Allowance/allowance
+git clone git@github.com:rodrigobruner/GrowUp.git
+cd GrowUp/growup
 
 # Install dependencies
 npm install
@@ -51,7 +51,7 @@ npm run deploy
 ---
 
 ## Project Structure (High‑Level)
-- `allowance/src/app` — UI, logic, IndexedDB service
-- `allowance/public/i18n` — translation files
-- `allowance/public/avatar` — avatar assets
-- `allowance/ngsw-config.json` — PWA config
+- `growup/src/app` — UI, logic, IndexedDB service
+- `growup/public/i18n` — translation files
+- `growup/public/avatar` — avatar assets
+- `growup/ngsw-config.json` — PWA config
