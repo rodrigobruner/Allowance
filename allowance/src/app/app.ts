@@ -1,20 +1,20 @@
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { AllowanceDbService, Completion, Reward, Settings, Task } from './allowance-db.service';
-import { AuthService } from './auth.service';
-import { SyncService } from './sync.service';
-import { ResetPasswordDialogComponent } from './components/reset-password-dialog/reset-password-dialog.component';
-import { AuthErrorDialogComponent } from './components/auth-error-dialog/auth-error-dialog.component';
-import { SettingsDialogComponent } from './components/settings-dialog/settings-dialog.component';
-import { TaskDialogComponent, TaskDialogResult } from './components/task-dialog/task-dialog.component';
-import { RewardDialogComponent, RewardDialogResult } from './components/reward-dialog/reward-dialog.component';
+import { AllowanceDbService, Completion, Reward, Settings, Task } from './core/services/allowance-db.service';
+import { AuthService } from './core/services/auth.service';
+import { SyncService } from './core/services/sync.service';
+import { ResetPasswordDialogComponent } from './features/auth/reset-password-dialog/reset-password-dialog.component';
+import { AuthErrorDialogComponent } from './features/auth/auth-error-dialog/auth-error-dialog.component';
+import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
+import { TaskDialogComponent, TaskDialogResult } from './features/tasks/task-dialog/task-dialog.component';
+import { RewardDialogComponent, RewardDialogResult } from './features/rewards/reward-dialog/reward-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TopbarComponent } from './components/topbar/topbar.component';
-import { SummaryCardComponent } from './components/summary-card/summary-card.component';
-import { TasksPanelComponent } from './components/tasks-panel/tasks-panel.component';
-import { RewardsPanelComponent } from './components/rewards-panel/rewards-panel.component';
-import { LevelupDialogComponent } from './components/levelup-dialog/levelup-dialog.component';
+import { SummaryCardComponent } from './features/summary/summary-card/summary-card.component';
+import { TasksPanelComponent } from './features/tasks/tasks-panel/tasks-panel.component';
+import { RewardsPanelComponent } from './features/rewards/rewards-panel/rewards-panel.component';
+import { LevelupDialogComponent } from './features/levelup/levelup-dialog/levelup-dialog.component';
 
 const currentDateKey = (): string => {
   const now = new Date();
@@ -97,6 +97,8 @@ export class App implements OnInit {
   private tasksSeeded = false;
   private rewardsSeeded = false;
   private isRefreshing = false;
+  private pendingRefresh = false;
+  private lastRefreshSeed = false;
   readonly isOnline = signal(navigator.onLine);
 
   constructor(
@@ -153,6 +155,18 @@ export class App implements OnInit {
       }
       void this.refreshFromDb(true);
     });
+    effect(() => {
+      const tick = this.sync.refreshTick();
+      if (!this.auth.isLoggedIn() || tick === 0) {
+        return;
+      }
+      void this.refreshFromDb(true);
+    });
+    effect(() => {
+      const user = this.auth.user();
+      this.db.setUser(user?.id ?? null);
+      void this.refreshFromDb(!user);
+    });
   }
 
   async ngOnInit(): Promise<void> {
@@ -185,6 +199,7 @@ export class App implements OnInit {
     };
     await this.db.addTask(task);
     this.tasks.update((items) => this.sortTasks([task, ...items]));
+    this.maybeSync();
   }
 
   async toggleTask(task: Task): Promise<void> {
@@ -194,6 +209,7 @@ export class App implements OnInit {
     if (alreadyDone) {
       await this.db.removeCompletion(completionId);
       this.completions.update((items) => items.filter((item) => item.id !== completionId));
+      this.maybeSync();
       return;
     }
 
@@ -207,6 +223,7 @@ export class App implements OnInit {
     };
     await this.db.addCompletion(completion);
     this.completions.update((items) => [completion, ...items]);
+    this.maybeSync();
     const nextLevel = Math.floor((currentEarned + task.points) / this.settings().levelUpPoints) + 1;
     if (nextLevel > previousLevel) {
       this.showLevelUp();
@@ -218,6 +235,7 @@ export class App implements OnInit {
     await this.db.removeCompletionsForTask(task.id);
     this.tasks.update((items) => items.filter((item) => item.id !== task.id));
     this.completions.update((items) => items.filter((item) => item.taskId !== task.id));
+    this.maybeSync();
   }
 
   async addReward(): Promise<void> {
@@ -246,6 +264,7 @@ export class App implements OnInit {
     };
     await this.db.addReward(reward);
     this.rewards.update((items) => this.sortRewards([reward, ...items]));
+    this.maybeSync();
   }
 
   async redeemReward(reward: Reward): Promise<void> {
@@ -253,6 +272,7 @@ export class App implements OnInit {
       const updated: Reward = { ...reward, redeemedAt: undefined };
       await this.db.updateReward(updated);
       this.rewards.update((items) => items.map((item) => (item.id === reward.id ? updated : item)));
+      this.maybeSync();
       return;
     }
 
@@ -263,15 +283,24 @@ export class App implements OnInit {
     const updated: Reward = { ...reward, redeemedAt: Date.now() };
     await this.db.updateReward(updated);
     this.rewards.update((items) => items.map((item) => (item.id === reward.id ? updated : item)));
+    this.maybeSync();
   }
 
   async removeReward(reward: Reward): Promise<void> {
     await this.db.removeReward(reward.id);
     this.rewards.update((items) => items.filter((item) => item.id !== reward.id));
+    this.maybeSync();
   }
 
   async openSettings(): Promise<void> {
-    const dialogRef = this.dialog.open(SettingsDialogComponent);
+    const dialogRef = this.dialog.open(SettingsDialogComponent, {
+      panelClass: 'settings-drawer',
+      width: '40vw',
+      maxWidth: '40vw',
+      height: '100vh',
+      maxHeight: '100vh',
+      position: { right: '0' }
+    });
     dialogRef.componentInstance.setSettings(this.settings());
     const result = await firstValueFrom(dialogRef.afterClosed());
     if (!result) {
@@ -281,6 +310,7 @@ export class App implements OnInit {
     await this.db.saveSettings(settings);
     this.settings.set(settings);
     this.translate.use(settings.language);
+    this.maybeSync();
   }
 
   private showLevelUp(): void {
@@ -295,12 +325,22 @@ export class App implements OnInit {
     });
   }
 
+  private maybeSync(): void {
+    if (this.auth.isLoggedIn() && this.isOnline()) {
+      this.sync.syncAll();
+    }
+  }
+
   private async refreshFromDb(seedIfEmpty: boolean): Promise<void> {
     if (this.isRefreshing) {
+      this.pendingRefresh = true;
+      this.lastRefreshSeed = seedIfEmpty;
       return;
     }
     this.isRefreshing = true;
+    this.lastRefreshSeed = seedIfEmpty;
     try {
+      await this.db.migrateDefaultIds();
       const [tasks, rewards, completions, settings] = await Promise.all([
         this.db.getTasks(),
         this.db.getRewards(),
@@ -339,6 +379,10 @@ export class App implements OnInit {
       }
     } finally {
       this.isRefreshing = false;
+      if (this.pendingRefresh) {
+        this.pendingRefresh = false;
+        void this.refreshFromDb(this.lastRefreshSeed);
+      }
     }
   }
 
@@ -369,8 +413,8 @@ export class App implements OnInit {
   private async seedDefaultTasks(): Promise<Task[]> {
     const language = this.translate.currentLang || this.translate.getDefaultLang() || 'en';
     const defaults = language.startsWith('pt') ? this.defaultTasksPt() : this.defaultTasksEn();
-    const seeded = defaults.map((entry) => ({
-      id: this.db.createId(),
+    const seeded = defaults.map((entry, index) => ({
+      id: this.defaultId('task', language, index),
       title: entry.title,
       points: entry.points,
       createdAt: Date.now()
@@ -382,14 +426,45 @@ export class App implements OnInit {
   private async seedDefaultRewards(): Promise<Reward[]> {
     const language = this.translate.currentLang || this.translate.getDefaultLang() || 'en';
     const defaults = language.startsWith('pt') ? this.defaultRewardsPt() : this.defaultRewardsEn();
-    const seeded = defaults.map((entry) => ({
-      id: this.db.createId(),
+    const seeded = defaults.map((entry, index) => ({
+      id: this.defaultId('reward', language, index),
       title: entry.title,
       cost: entry.cost,
       createdAt: Date.now()
     }));
     await Promise.all(seeded.map((reward) => this.db.addReward(reward)));
     return seeded;
+  }
+
+  private defaultId(kind: 'task' | 'reward', language: string, index: number): string {
+    const langKey = language.startsWith('pt') ? 'pt' : 'en';
+    const seed = `default-${kind}-${langKey}-${index + 1}`;
+    return this.uuidFromString(seed);
+  }
+
+  private uuidFromString(value: string): string {
+    const hash = (seed: number) => {
+      let h = 2166136261 ^ seed;
+      for (let i = 0; i < value.length; i += 1) {
+        h ^= value.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    };
+
+    const toHex = (num: number, length: number) => num.toString(16).padStart(length, '0');
+    const a = hash(1);
+    const b = hash(2);
+    const c = hash(3);
+    const d = hash(4);
+
+    const part1 = toHex(a, 8);
+    const part2 = toHex(b >>> 16, 4);
+    const part3 = toHex((b & 0x0fff) | 0x5000, 4);
+    const part4 = toHex((c & 0x3fff) | 0x8000, 4);
+    const part5 = toHex(d, 8) + toHex(c >>> 16, 4);
+
+    return `${part1}-${part2}-${part3}-${part4}-${part5}`;
   }
 
   private defaultTasksPt(): Array<{ title: string; points: number }> {

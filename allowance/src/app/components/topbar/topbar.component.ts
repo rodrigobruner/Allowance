@@ -6,9 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { TranslateModule } from '@ngx-translate/core';
-import { AuthService } from '../../auth.service';
-import { AuthDialogComponent } from '../auth-dialog/auth-dialog.component';
-import { ResetPasswordDialogComponent } from '../reset-password-dialog/reset-password-dialog.component';
+import { AuthService } from '../../core/services/auth.service';
+import { AuthDialogComponent } from '../../features/auth/auth-dialog/auth-dialog.component';
+import { ResetPasswordDialogComponent } from '../../features/auth/reset-password-dialog/reset-password-dialog.component';
 import { SyncStatusDialogComponent } from '../sync-status-dialog/sync-status-dialog.component';
 
 @Component({
@@ -70,12 +70,15 @@ import { SyncStatusDialogComponent } from '../sync-status-dialog/sync-status-dia
       }
 
       .sync-status {
-        display: grid;
-        justify-items: end;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
         font-size: 0.7rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         opacity: 0.75;
+        line-height: 1;
       }
 
       .sync-status .status {
@@ -105,6 +108,10 @@ import { SyncStatusDialogComponent } from '../sync-status-dialog/sync-status-dia
         color: #d2f3d0;
       }
 
+      .sync-status .status.updated {
+        color: #d2f3d0;
+      }
+
       .sync-status .status.error {
         color: #ffd1d1;
       }
@@ -122,6 +129,10 @@ import { SyncStatusDialogComponent } from '../sync-status-dialog/sync-status-dia
       }
 
       .sync-status .status.synced .dot {
+        background: #6ee7a5;
+      }
+
+      .sync-status .status.updated .dot {
         background: #6ee7a5;
       }
 

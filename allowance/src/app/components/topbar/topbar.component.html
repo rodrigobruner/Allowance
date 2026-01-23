@@ -41,7 +41,7 @@
       <span class="material-icons avatar-icon">account_circle</span>
     </button>
   </ng-template>
-  <div class="sync-status">
+  <div class="sync-status" *ngIf="isLoggedIn()">
     <span
       *ngIf="!isOnline || syncError"
       class="status offline"
@@ -60,6 +60,10 @@
     <span *ngIf="isOnline && !isSyncing && lastSyncAt && !syncError" class="status synced">
       <span class="dot"></span>
       {{ 'sync.syncedAt' | translate:{ time: (lastSyncAt | date:'shortTime') } }}
+    </span>
+    <span *ngIf="isOnline && !isSyncing && lastSyncAt && !syncError" class="status updated">
+      <span class="dot"></span>
+      {{ 'sync.updatedAt' | translate:{ time: (lastSyncAt | date:'shortTime') } }}
     </span>
   </div>
 </mat-toolbar>

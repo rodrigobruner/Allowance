@@ -58,8 +58,8 @@ class AllowanceDexie extends Dexie {
   settings!: Table<Settings, string>;
   outbox!: Table<OutboxEntry, number>;
 
-  constructor() {
-    super('allowance-db');
+  constructor(name: string) {
+    super(name);
     this.version(1).stores({
       tasks: 'id,createdAt',
       rewards: 'id,createdAt,redeemedAt',
@@ -74,7 +74,18 @@ class AllowanceDexie extends Dexie {
   providedIn: 'root'
 })
 export class AllowanceDbService {
-  private readonly db = new AllowanceDexie();
+  private db = this.createDb('allowance-db-anon');
+  private currentUserKey = 'anon';
+
+  setUser(userId: string | null): void {
+    const nextKey = userId ?? 'anon';
+    if (nextKey === this.currentUserKey) {
+      return;
+    }
+    this.currentUserKey = nextKey;
+    this.db.close();
+    this.db = this.createDb(`allowance-db-${nextKey}`);
+  }
 
   async getTasks(): Promise<Task[]> {
     return this.getAll<Task>('tasks');
@@ -193,6 +204,109 @@ export class AllowanceDbService {
     return this.db.table(storeName).get(key) as Promise<T | undefined>;
   }
 
+  async migrateDefaultIds(): Promise<void> {
+    const defaultTaskPattern = /^default-task-(pt|en)-(\d+)$/;
+    const defaultRewardPattern = /^default-reward-(pt|en)-(\d+)$/;
+    const tasks = await this.getAll<Task>('tasks');
+    const rewards = await this.getAll<Reward>('rewards');
+    const completions = await this.getAll<Completion>('completions');
+    const outbox = await this.getOutbox();
+
+    const taskIdMap = new Map<string, string>();
+    const rewardIdMap = new Map<string, string>();
+
+    for (const task of tasks) {
+      const match = defaultTaskPattern.exec(task.id);
+      if (!match) {
+        continue;
+      }
+      const seed = `default-task-${match[1]}-${match[2]}`;
+      const nextId = this.uuidFromString(seed);
+      if (nextId !== task.id) {
+        taskIdMap.set(task.id, nextId);
+        await this.db.table('tasks').put({ ...task, id: nextId });
+        await this.db.table('tasks').delete(task.id);
+      }
+    }
+
+    for (const reward of rewards) {
+      const match = defaultRewardPattern.exec(reward.id);
+      if (!match) {
+        continue;
+      }
+      const seed = `default-reward-${match[1]}-${match[2]}`;
+      const nextId = this.uuidFromString(seed);
+      if (nextId !== reward.id) {
+        rewardIdMap.set(reward.id, nextId);
+        await this.db.table('rewards').put({ ...reward, id: nextId });
+        await this.db.table('rewards').delete(reward.id);
+      }
+    }
+
+    for (const completion of completions) {
+      const nextTaskId = taskIdMap.get(completion.taskId);
+      if (!nextTaskId) {
+        continue;
+      }
+      const nextId = completion.id.startsWith(`${completion.taskId}-`)
+        ? `${nextTaskId}-${completion.date}`
+        : completion.id;
+      await this.db.table('completions').put({
+        ...completion,
+        id: nextId,
+        taskId: nextTaskId
+      });
+      if (nextId !== completion.id) {
+        await this.db.table('completions').delete(completion.id);
+      }
+    }
+
+    for (const entry of outbox) {
+      let changed = false;
+      const updated = { ...entry };
+      if (entry.entity === 'tasks') {
+        const nextId = taskIdMap.get(entry.recordId);
+        if (nextId) {
+          updated.recordId = nextId;
+          if (updated.payload && typeof updated.payload === 'object') {
+            (updated.payload as Task).id = nextId;
+          }
+          changed = true;
+        }
+      } else if (entry.entity === 'rewards') {
+        const nextId = rewardIdMap.get(entry.recordId);
+        if (nextId) {
+          updated.recordId = nextId;
+          if (updated.payload && typeof updated.payload === 'object') {
+            (updated.payload as Reward).id = nextId;
+          }
+          changed = true;
+        }
+      } else if (entry.entity === 'completions') {
+        const payload = updated.payload as Completion | undefined;
+        const nextTaskId = payload ? taskIdMap.get(payload.taskId) : undefined;
+        if (nextTaskId) {
+          const nextId = payload?.id && payload.id.startsWith(`${payload.taskId}-`)
+            ? `${nextTaskId}-${payload.date}`
+            : payload?.id;
+          if (nextId && updated.recordId !== nextId) {
+            updated.recordId = nextId;
+          }
+          if (payload) {
+            payload.taskId = nextTaskId;
+            if (nextId) {
+              payload.id = nextId;
+            }
+          }
+          changed = true;
+        }
+      }
+      if (changed && entry.seq !== undefined) {
+        await this.db.outbox.put({ ...updated, seq: entry.seq });
+      }
+    }
+  }
+
   private async enqueueOutbox(
     entity: OutboxEntity,
     action: OutboxAction,
@@ -206,5 +320,34 @@ export class AllowanceDbService {
       payload,
       createdAt: Date.now()
     });
+  }
+
+  private createDb(name: string): AllowanceDexie {
+    return new AllowanceDexie(name);
+  }
+
+  private uuidFromString(value: string): string {
+    const hash = (seed: number) => {
+      let h = 2166136261 ^ seed;
+      for (let i = 0; i < value.length; i += 1) {
+        h ^= value.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    };
+
+    const toHex = (num: number, length: number) => num.toString(16).padStart(length, '0');
+    const a = hash(1);
+    const b = hash(2);
+    const c = hash(3);
+    const d = hash(4);
+
+    const part1 = toHex(a, 8);
+    const part2 = toHex(b >>> 16, 4);
+    const part3 = toHex((b & 0x0fff) | 0x5000, 4);
+    const part4 = toHex((c & 0x3fff) | 0x8000, 4);
+    const part5 = toHex(d, 8) + toHex(c >>> 16, 4);
+
+    return `${part1}-${part2}-${part3}-${part4}-${part5}`;
   }
 }

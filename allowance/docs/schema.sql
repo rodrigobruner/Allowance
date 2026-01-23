@@ -87,7 +87,8 @@ create policy "tasks_write_own" on public.tasks
 for insert with check (auth.uid() = owner_id);
 
 create policy "tasks_update_own" on public.tasks
-for update using (auth.uid() = owner_id);
+for update using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
 
 create policy "tasks_delete_own" on public.tasks
 for delete using (auth.uid() = owner_id);
@@ -99,7 +100,8 @@ create policy "rewards_write_own" on public.rewards
 for insert with check (auth.uid() = owner_id);
 
 create policy "rewards_update_own" on public.rewards
-for update using (auth.uid() = owner_id);
+for update using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
 
 create policy "rewards_delete_own" on public.rewards
 for delete using (auth.uid() = owner_id);
@@ -111,7 +113,8 @@ create policy "completions_write_own" on public.completions
 for insert with check (auth.uid() = owner_id);
 
 create policy "completions_update_own" on public.completions
-for update using (auth.uid() = owner_id);
+for update using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
 
 create policy "completions_delete_own" on public.completions
 for delete using (auth.uid() = owner_id);
@@ -123,7 +126,22 @@ create policy "settings_write_own" on public.settings
 for insert with check (auth.uid() = owner_id);
 
 create policy "settings_update_own" on public.settings
-for update using (auth.uid() = owner_id);
+for update using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
 
 create policy "settings_delete_own" on public.settings
 for delete using (auth.uid() = owner_id);
+
+create or replace function public.delete_user_account()
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_user_account() from public;
+grant execute on function public.delete_user_account() to authenticated;

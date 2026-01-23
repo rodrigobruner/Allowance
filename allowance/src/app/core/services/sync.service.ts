@@ -10,9 +10,11 @@ type SyncTable = 'tasks' | 'rewards' | 'completions' | 'settings';
 })
 export class SyncService {
   private channel: RealtimeChannel | null = null;
+  private pollHandle: number | null = null;
   readonly isSyncing = signal(false);
   readonly lastSyncAt = signal<number | null>(null);
   readonly lastError = signal<string | null>(null);
+  readonly refreshTick = signal(0);
   readonly isLoggedIn = computed(() => this.auth.isLoggedIn());
 
   constructor(
@@ -26,6 +28,7 @@ export class SyncService {
     }
     await this.syncAll();
     this.subscribeRealtime();
+    this.startPolling();
   }
 
   stop(): void {
@@ -33,10 +36,14 @@ export class SyncService {
       this.channel.unsubscribe();
       this.channel = null;
     }
+    this.stopPolling();
   }
 
   async syncAll(): Promise<void> {
     if (!this.auth.user()) {
+      return;
+    }
+    if (!navigator.onLine) {
       return;
     }
     this.isSyncing.set(true);
@@ -45,6 +52,7 @@ export class SyncService {
       await this.pushOutbox();
       await this.pullAll();
       this.lastSyncAt.set(Date.now());
+      this.refreshTick.update((value) => value + 1);
     } catch (error) {
       this.lastError.set(this.errorToMessage(error));
     } finally {
@@ -109,7 +117,7 @@ export class SyncService {
         } else if (entry.action === 'delete') {
           const { error } = await supabase
             .from(table)
-            .delete()
+            .update({ deleted_at: new Date().toISOString() })
             .eq('id', entry.recordId)
             .eq('owner_id', user.id);
           if (error) {
@@ -141,6 +149,7 @@ export class SyncService {
       return;
     }
     const supabase = this.auth.getClient();
+    let didUpdate = false;
     if (table === 'settings') {
       const { data, error } = await supabase.from('settings').select('*').eq('owner_id', user.id).maybeSingle();
       if (error) {
@@ -151,6 +160,11 @@ export class SyncService {
       }
       const local = this.toLocalSettings(data);
       await this.db.saveRemoteRecord('settings', local);
+      didUpdate = true;
+      if (didUpdate) {
+        this.lastSyncAt.set(Date.now());
+        this.refreshTick.update((value) => value + 1);
+      }
       return;
     }
 
@@ -165,6 +179,7 @@ export class SyncService {
     for (const row of data) {
       if (row.deleted_at) {
         await this.db.deleteRemoteRecord(table, row.id);
+        didUpdate = true;
         continue;
       }
       const localRecord = await this.db.getRecord<Task | Reward | Completion>(table, row.id);
@@ -173,7 +188,12 @@ export class SyncService {
       if (remoteUpdatedAt >= localUpdatedAt) {
         const local = this.toLocalRecord(table, row);
         await this.db.saveRemoteRecord(table, local);
+        didUpdate = true;
       }
+    }
+    if (didUpdate) {
+      this.lastSyncAt.set(Date.now());
+      this.refreshTick.update((value) => value + 1);
     }
   }
 
@@ -208,6 +228,23 @@ export class SyncService {
       .subscribe();
   }
 
+  private startPolling(): void {
+    if (this.pollHandle !== null) {
+      return;
+    }
+    this.pollHandle = window.setInterval(() => {
+      void this.syncAll();
+    }, 30000);
+  }
+
+  private stopPolling(): void {
+    if (this.pollHandle === null) {
+      return;
+    }
+    window.clearInterval(this.pollHandle);
+    this.pollHandle = null;
+  }
+
   private toRemotePayload(
     table: Exclude<SyncTable, 'settings'>,
     payload: Task | Reward | Completion,
@@ -220,7 +257,8 @@ export class SyncService {
         owner_id: ownerId,
         title: task.title,
         points: task.points,
-        created_at: new Date(task.createdAt).toISOString()
+        created_at: new Date(task.createdAt).toISOString(),
+        deleted_at: null
       };
     }
     if (table === 'rewards') {
@@ -231,7 +269,8 @@ export class SyncService {
         title: reward.title,
         cost: reward.cost,
         created_at: new Date(reward.createdAt).toISOString(),
-        redeemed_at: reward.redeemedAt ? new Date(reward.redeemedAt).toISOString() : null
+        redeemed_at: reward.redeemedAt ? new Date(reward.redeemedAt).toISOString() : null,
+        deleted_at: null
       };
     }
     const completion = payload as Completion;
@@ -240,7 +279,8 @@ export class SyncService {
       owner_id: ownerId,
       task_id: completion.taskId,
       date: completion.date,
-      points: completion.points
+      points: completion.points,
+      deleted_at: null
     };
   }
 

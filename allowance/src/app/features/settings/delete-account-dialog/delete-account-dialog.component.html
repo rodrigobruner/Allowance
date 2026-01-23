@@ -1,0 +1,12 @@
+<h2 mat-dialog-title>{{ 'settingsDialog.deleteAccountTitle' | translate }}</h2>
+<mat-dialog-content>
+  <p>{{ 'settingsDialog.deleteAccountWarning' | translate }}</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button [mat-dialog-close]="false">
+    {{ 'settingsDialog.cancel' | translate }}
+  </button>
+  <button mat-flat-button color="warn" [mat-dialog-close]="true">
+    {{ 'settingsDialog.deleteAccountConfirm' | translate }}
+  </button>
+</mat-dialog-actions>

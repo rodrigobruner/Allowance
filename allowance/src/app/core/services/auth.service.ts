@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Inject, Injectable, computed, signal } from '@angular/core';
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase-config';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/supabase-config';
 
 type AuthError = {
   message: string;
@@ -96,6 +96,15 @@ export class AuthService {
   async signOut(): Promise<AuthError | null> {
     const { error } = await this.supabase.auth.signOut();
     return error ? { message: error.message } : null;
+  }
+
+  async deleteAccount(): Promise<AuthError | null> {
+    const { error } = await this.supabase.rpc('delete_user_account');
+    if (error) {
+      return { message: error.message };
+    }
+    await this.supabase.auth.signOut();
+    return null;
   }
 
   private detectPasswordRecovery(): void {

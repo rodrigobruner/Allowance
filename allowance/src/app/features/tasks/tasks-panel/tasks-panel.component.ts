@@ -3,13 +3,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { TranslateModule } from '@ngx-translate/core';
-import { Reward } from '../../allowance-db.service';
+import { Task } from '../../../core/services/allowance-db.service';
 
 @Component({
-  selector: 'app-rewards-panel',
+  selector: 'app-tasks-panel',
   standalone: true,
   imports: [MatCardModule, MatButtonModule, MatIconModule, TranslateModule],
-  templateUrl: './rewards-panel.component.html',
+  templateUrl: './tasks-panel.component.html',
   styles: [
     `
       .panel {
@@ -74,6 +74,28 @@ import { Reward } from '../../allowance-db.service';
         font: inherit;
       }
 
+      .check-toggle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid #c7ceda;
+        background: #ffffff;
+        display: grid;
+        place-items: center;
+        color: #c7ceda;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .check-toggle .material-icons {
+        font-size: 20px;
+      }
+
+      .check-toggle.done {
+        border-color: #35b26b;
+        color: #35b26b;
+      }
+
       .status {
         font-size: 0.85rem;
         font-weight: 600;
@@ -111,10 +133,10 @@ import { Reward } from '../../allowance-db.service';
     `
   ]
 })
-export class RewardsPanelComponent {
-  @Input({ required: true }) rewards: Reward[] = [];
-  @Input({ required: true }) balance = 0;
-  @Output() addReward = new EventEmitter<void>();
-  @Output() redeemReward = new EventEmitter<Reward>();
-  @Output() removeReward = new EventEmitter<Reward>();
+export class TasksPanelComponent {
+  @Input({ required: true }) tasks: Task[] = [];
+  @Input({ required: true }) todayDoneIds = new Set<string>();
+  @Output() addTask = new EventEmitter<void>();
+  @Output() toggleTask = new EventEmitter<Task>();
+  @Output() removeTask = new EventEmitter<Task>();
 }

@@ -43,8 +43,6 @@
   },
   "settingsDialog": {
     "title": "Settings",
-    "tabPreferences": "Preferences",
-    "tabSettings": "Settings",
     "languageSection": "Language",
     "cycleSection": "Cycle",
     "levelupSection": "Level-up",
@@ -54,8 +52,13 @@
     "language": "Language",
     "levelUpPoints": "Points per level",
     "avatar": "Avatar",
+    "deleteAccount": "Delete account",
+    "deleteAccountTitle": "Delete account",
+    "deleteAccountWarning": "This will permanently delete your account and all associated data.",
+    "deleteAccountConfirm": "Delete permanently",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "close": "Close"
   },
   "cycle": {
     "weekly": "Weekly",
@@ -72,6 +75,7 @@
     "offline": "Offline",
     "syncing": "Syncing",
     "syncedAt": "Synced {{ time }}",
+    "updatedAt": "Updated {{ time }}",
     "detailsTitle": "Sync details",
     "detailsOnline": "Connectivity",
     "detailsSyncing": "Status",
