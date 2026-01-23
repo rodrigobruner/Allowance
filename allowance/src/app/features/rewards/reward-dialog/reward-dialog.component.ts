@@ -9,6 +9,7 @@ import { TranslateModule } from '@ngx-translate/core';
 export type RewardDialogResult = {
   title: string;
   cost: number;
+  limitPerCycle: number;
 };
 
 @Component({
@@ -40,7 +41,8 @@ export class RewardDialogComponent {
 
   form = this.formBuilder.group({
     title: ['', [Validators.required, Validators.minLength(3)]],
-    cost: [10, [Validators.required, Validators.min(1)]]
+    cost: [10, [Validators.required, Validators.min(1)]],
+    limitPerCycle: [1, [Validators.required, Validators.min(1)]]
   });
 
   save(): void {

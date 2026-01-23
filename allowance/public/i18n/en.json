@@ -41,12 +41,14 @@
     "name": "Reward",
     "placeholder": "Movie night",
     "cost": "Cost in XP",
+    "limitPerCycle": "Limit per cycle",
     "add": "Add reward",
     "empty": "No rewards yet.",
     "available": "Available",
     "redeemed": "Redeemed",
     "redeemedAt": "Redeemed on",
-    "redeemedEmpty": "No redeemed rewards yet."
+    "redeemedEmpty": "No redeemed rewards yet.",
+    "use": "Use reward"
   },
   "settingsDialog": {
     "title": "Settings",

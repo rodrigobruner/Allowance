@@ -48,8 +48,12 @@
     <app-rewards-panel
       [rewards]="rewards()"
       [balance]="balance()"
+      [redemptions]="redemptions()"
+      [cycleStart]="currentCycleRange().start"
+      [cycleEnd]="currentCycleRange().end"
       (addReward)="openRewardDialog()"
       (redeemReward)="redeemReward($event)"
+      (consumeReward)="consumeReward($event)"
       (removeReward)="removeReward($event)"
     />
   </section>

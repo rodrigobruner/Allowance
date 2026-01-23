@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { TranslateModule } from '@ngx-translate/core';
-import { Reward } from '../../../core/services/allowance-db.service';
+import { Reward, RewardRedemption } from '../../../core/services/allowance-db.service';
 
 @Component({
   selector: 'app-rewards-panel',
@@ -148,8 +148,12 @@ import { Reward } from '../../../core/services/allowance-db.service';
 export class RewardsPanelComponent {
   @Input({ required: true }) rewards: Reward[] = [];
   @Input({ required: true }) balance = 0;
+  @Input({ required: true }) redemptions: RewardRedemption[] = [];
+  @Input({ required: true }) cycleStart = '';
+  @Input({ required: true }) cycleEnd = '';
   @Output() addReward = new EventEmitter<void>();
   @Output() redeemReward = new EventEmitter<Reward>();
+  @Output() consumeReward = new EventEmitter<RewardRedemption>();
   @Output() removeReward = new EventEmitter<Reward>();
 
   pageIndex = 0;
@@ -157,16 +161,23 @@ export class RewardsPanelComponent {
   pageSizeOptions = [10, 20, 50];
 
   get availableRewards(): Reward[] {
-    return this.rewards.filter((reward) => !reward.redeemedAt);
+    return this.rewards.filter((reward) => {
+      const redeemedInCycle = this.redemptions.filter(
+        (redemption) =>
+          redemption.rewardId === reward.id &&
+          redemption.date >= this.cycleStart &&
+          redemption.date <= this.cycleEnd
+      ).length;
+      const limit = reward.limitPerCycle ?? 1;
+      return redeemedInCycle < limit;
+    });
   }
 
-  get redeemedRewards(): Reward[] {
-    return [...this.rewards]
-      .filter((reward) => reward.redeemedAt)
-      .sort((a, b) => (b.redeemedAt ?? 0) - (a.redeemedAt ?? 0));
+  get redeemedRewards(): RewardRedemption[] {
+    return [...this.redemptions].sort((a, b) => b.redeemedAt - a.redeemedAt);
   }
 
-  get pagedRedeemedRewards(): Reward[] {
+  get pagedRedeemedRewards(): RewardRedemption[] {
     const start = this.pageIndex * this.pageSize;
     return this.redeemedRewards.slice(start, start + this.pageSize);
   }

@@ -1,6 +1,13 @@
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { AllowanceDbService, Completion, Reward, Settings, Task } from './core/services/allowance-db.service';
+import {
+  AllowanceDbService,
+  Completion,
+  Reward,
+  RewardRedemption,
+  Settings,
+  Task
+} from './core/services/allowance-db.service';
 import { AuthService } from './core/services/auth.service';
 import { SyncService } from './core/services/sync.service';
 import { ResetPasswordDialogComponent } from './features/auth/reset-password-dialog/reset-password-dialog.component';
@@ -41,6 +48,7 @@ export class App implements OnInit {
   tasks = signal<Task[]>([]);
   rewards = signal<Reward[]>([]);
   completions = signal<Completion[]>([]);
+  redemptions = signal<RewardRedemption[]>([]);
   settings = signal<Settings>({
     id: 'global',
     cycleType: 'weekly',
@@ -51,17 +59,14 @@ export class App implements OnInit {
   });
 
   earned = computed(() => this.completions().reduce((sum, completion) => sum + completion.points, 0));
-  spent = computed(() =>
-    this.rewards()
-      .filter((reward) => reward.redeemedAt)
-      .reduce((sum, reward) => sum + reward.cost, 0)
-  );
+  spent = computed(() => this.redemptions().reduce((sum, redemption) => sum + redemption.cost, 0));
   balance = computed(() => this.earned() - this.spent());
   cycleEarned = computed(() => {
     const { start, end } = this.getCycleRange();
     return this.completions().filter((completion) => completion.date >= start && completion.date <= end)
       .reduce((sum, completion) => sum + completion.points, 0);
   });
+  currentCycleRange = computed(() => this.getCycleRange());
   previousCycleEarned = computed(() => {
     const range = this.getPreviousCycleRange();
     if (!range) {
@@ -92,7 +97,7 @@ export class App implements OnInit {
   completedCount = computed(() =>
     this.completions().filter((completion) => completion.date === this.selectedDate()).length
   );
-  redeemedCount = computed(() => this.rewards().filter((reward) => reward.redeemedAt).length);
+  redeemedCount = computed(() => this.redemptions().length);
   todayDoneIds = computed(() =>
     new Set(
       this.completions()
@@ -269,6 +274,7 @@ export class App implements OnInit {
       id: this.db.createId(),
       title: rawTitle,
       cost: Number(result.cost),
+      limitPerCycle: Number(result.limitPerCycle),
       createdAt: Date.now()
     };
     await this.db.addReward(reward);
@@ -277,21 +283,36 @@ export class App implements OnInit {
   }
 
   async redeemReward(reward: Reward): Promise<void> {
-    if (reward.redeemedAt) {
-      const updated: Reward = { ...reward, redeemedAt: undefined };
-      await this.db.updateReward(updated);
-      this.rewards.update((items) => items.map((item) => (item.id === reward.id ? updated : item)));
-      this.maybeSync();
-      return;
-    }
-
     if (this.balance() < reward.cost) {
       return;
     }
 
-    const updated: Reward = { ...reward, redeemedAt: Date.now() };
-    await this.db.updateReward(updated);
-    this.rewards.update((items) => items.map((item) => (item.id === reward.id ? updated : item)));
+    const { start, end } = this.getCycleRange();
+    const redeemedInCycle = this.redemptions().filter(
+      (redemption) =>
+        redemption.rewardId === reward.id && redemption.date >= start && redemption.date <= end
+    ).length;
+    const limit = reward.limitPerCycle ?? 1;
+    if (redeemedInCycle >= limit) {
+      return;
+    }
+
+    const redemption: RewardRedemption = {
+      id: this.db.createId(),
+      rewardId: reward.id,
+      rewardTitle: reward.title,
+      cost: reward.cost,
+      redeemedAt: Date.now(),
+      date: this.today()
+    };
+    await this.db.addRedemption(redemption);
+    this.redemptions.update((items) => [redemption, ...items]);
+    this.maybeSync();
+  }
+
+  async consumeReward(redemption: RewardRedemption): Promise<void> {
+    await this.db.removeRedemption(redemption.id);
+    this.redemptions.update((items) => items.filter((item) => item.id !== redemption.id));
     this.maybeSync();
   }
 
@@ -358,11 +379,13 @@ export class App implements OnInit {
     this.lastRefreshSeed = seedIfEmpty;
     try {
       await this.db.migrateDefaultIds();
-      const [tasks, rewards, completions, settings] = await Promise.all([
+      await this.db.migrateLegacyRewardRedemptions();
+      const [tasks, rewards, completions, settings, redemptions] = await Promise.all([
         this.db.getTasks(),
         this.db.getRewards(),
         this.db.getCompletions(),
-        this.db.getSettings()
+        this.db.getSettings(),
+        this.db.getRedemptions()
       ]);
       let didSeed = false;
       if (tasks.length === 0 && seedIfEmpty && !this.tasksSeeded) {
@@ -382,6 +405,7 @@ export class App implements OnInit {
         this.rewards.set(this.sortRewards(rewards));
       }
       this.completions.set(completions);
+      this.redemptions.set(redemptions);
       if (settings) {
         this.settings.set({
           ...settings,
@@ -424,7 +448,9 @@ export class App implements OnInit {
   }
 
   private sortRewards(items: Reward[]): Reward[] {
-    return [...items].sort((a, b) => a.cost - b.cost);
+    return [...items]
+      .map((reward) => ({ ...reward, limitPerCycle: reward.limitPerCycle ?? 1 }))
+      .sort((a, b) => a.cost - b.cost);
   }
 
   private async seedDefaultTasks(): Promise<Task[]> {
@@ -447,6 +473,7 @@ export class App implements OnInit {
       id: this.defaultId('reward', language, index),
       title: entry.title,
       cost: entry.cost,
+      limitPerCycle: entry.limitPerCycle,
       createdAt: Date.now()
     }));
     await Promise.all(seeded.map((reward) => this.db.addReward(reward)));
@@ -514,29 +541,29 @@ export class App implements OnInit {
     ];
   }
 
-  private defaultRewardsEn(): Array<{ title: string; cost: number }> {
+  private defaultRewardsEn(): Array<{ title: string; cost: number; limitPerCycle: number }> {
     return [
-      { title: '🎶 Choose the music in the car', cost: 10 },
-      { title: '📚 Visit the library or bookstore', cost: 15 },
-      { title: '♟️ Family game time', cost: 20 },
-      { title: '🍿 Family movie night', cost: 20 },
-      { title: '🎮 Extra video game time', cost: 30 },
-      { title: '🍕 Special coffee/lunch/dinner', cost: 35 },
-      { title: '🎥 Movie theater', cost: 50 },
-      { title: '🍔 Eat out', cost: 50 }
+      { title: '🎶 Choose the music in the car', cost: 10, limitPerCycle: 1 },
+      { title: '📚 Visit the library or bookstore', cost: 15, limitPerCycle: 1 },
+      { title: '♟️ Family game time', cost: 20, limitPerCycle: 1 },
+      { title: '🍿 Family movie night', cost: 20, limitPerCycle: 1 },
+      { title: '🎮 Extra video game time', cost: 30, limitPerCycle: 1 },
+      { title: '🍕 Special coffee/lunch/dinner', cost: 35, limitPerCycle: 1 },
+      { title: '🎥 Movie theater', cost: 50, limitPerCycle: 1 },
+      { title: '🍔 Eat out', cost: 50, limitPerCycle: 1 }
     ];
   }
 
-  private defaultRewardsPt(): Array<{ title: string; cost: number }> {
+  private defaultRewardsPt(): Array<{ title: string; cost: number; limitPerCycle: number }> {
     return [
-      { title: '🎶 Escolher a música no carro', cost: 10 },
-      { title: '📚 Visitar a biblioteca ou livraria', cost: 15 },
-      { title: '♟️ Jogo em família', cost: 20 },
-      { title: '🍿 Cinema em família', cost: 20 },
-      { title: '🎮 Tempo extra de videogame', cost: 30 },
-      { title: '🍕 Café/lanche/jantar especial', cost: 35 },
-      { title: '🎥 Cinema', cost: 50 },
-      { title: '🍔 Comer fora', cost: 50 }
+      { title: '🎶 Escolher a música no carro', cost: 10, limitPerCycle: 1 },
+      { title: '📚 Visitar a biblioteca ou livraria', cost: 15, limitPerCycle: 1 },
+      { title: '♟️ Jogo em família', cost: 20, limitPerCycle: 1 },
+      { title: '🍿 Cinema em família', cost: 20, limitPerCycle: 1 },
+      { title: '🎮 Tempo extra de videogame', cost: 30, limitPerCycle: 1 },
+      { title: '🍕 Café/lanche/jantar especial', cost: 35, limitPerCycle: 1 },
+      { title: '🎥 Cinema', cost: 50, limitPerCycle: 1 },
+      { title: '🍔 Comer fora', cost: 50, limitPerCycle: 1 }
     ];
   }
 

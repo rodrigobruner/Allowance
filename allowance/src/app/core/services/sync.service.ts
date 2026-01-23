@@ -1,9 +1,9 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { type RealtimeChannel } from '@supabase/supabase-js';
-import { AllowanceDbService, Completion, Reward, Settings, Task } from './allowance-db.service';
+import { AllowanceDbService, Completion, Reward, RewardRedemption, Settings, Task } from './allowance-db.service';
 import { AuthService } from './auth.service';
 
-type SyncTable = 'tasks' | 'rewards' | 'completions' | 'settings';
+type SyncTable = 'tasks' | 'rewards' | 'completions' | 'settings' | 'redemptions';
 
 @Injectable({
   providedIn: 'root'
@@ -69,7 +69,15 @@ export class SyncService {
     const entries = await this.db.getOutbox();
     const ordered = [...entries].sort((a, b) => {
       const priority = (entity: string) =>
-        entity === 'tasks' ? 0 : entity === 'rewards' ? 1 : entity === 'settings' ? 2 : 3;
+        entity === 'tasks'
+          ? 0
+          : entity === 'rewards'
+            ? 1
+            : entity === 'redemptions'
+              ? 2
+              : entity === 'settings'
+                ? 3
+                : 4;
       return priority(a.entity) - priority(b.entity);
     });
 
@@ -139,7 +147,8 @@ export class SyncService {
       this.pullTable('tasks'),
       this.pullTable('rewards'),
       this.pullTable('completions'),
-      this.pullTable('settings')
+      this.pullTable('settings'),
+      this.pullTable('redemptions')
     ]);
   }
 
@@ -182,7 +191,7 @@ export class SyncService {
         didUpdate = true;
         continue;
       }
-      const localRecord = await this.db.getRecord<Task | Reward | Completion>(table, row.id);
+      const localRecord = await this.db.getRecord<Task | Reward | Completion | RewardRedemption>(table, row.id);
       const localUpdatedAt = localRecord?.updatedAt ?? 0;
       const remoteUpdatedAt = row.updated_at ? new Date(row.updated_at).getTime() : 0;
       if (remoteUpdatedAt >= localUpdatedAt) {
@@ -225,6 +234,11 @@ export class SyncService {
         { event: '*', schema: 'public', table: 'settings', filter: `owner_id=eq.${user.id}` },
         () => this.pullTable('settings')
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'redemptions', filter: `owner_id=eq.${user.id}` },
+        () => this.pullTable('redemptions')
+      )
       .subscribe();
   }
 
@@ -247,7 +261,7 @@ export class SyncService {
 
   private toRemotePayload(
     table: Exclude<SyncTable, 'settings'>,
-    payload: Task | Reward | Completion,
+    payload: Task | Reward | Completion | RewardRedemption,
     ownerId: string
   ): Record<string, unknown> {
     if (table === 'tasks') {
@@ -268,8 +282,22 @@ export class SyncService {
         owner_id: ownerId,
         title: reward.title,
         cost: reward.cost,
+        limit_per_cycle: reward.limitPerCycle ?? 1,
         created_at: new Date(reward.createdAt).toISOString(),
         redeemed_at: reward.redeemedAt ? new Date(reward.redeemedAt).toISOString() : null,
+        deleted_at: null
+      };
+    }
+    if (table === 'redemptions') {
+      const redemption = payload as RewardRedemption;
+      return {
+        id: redemption.id,
+        owner_id: ownerId,
+        reward_id: redemption.rewardId,
+        reward_title: redemption.rewardTitle,
+        cost: redemption.cost,
+        redeemed_at: new Date(redemption.redeemedAt).toISOString(),
+        date: redemption.date,
         deleted_at: null
       };
     }
@@ -296,7 +324,10 @@ export class SyncService {
     };
   }
 
-  private toLocalRecord(table: Exclude<SyncTable, 'settings'>, row: any): Task | Reward | Completion {
+  private toLocalRecord(
+    table: Exclude<SyncTable, 'settings'>,
+    row: any
+  ): Task | Reward | Completion | RewardRedemption {
     if (table === 'tasks') {
       return {
         id: row.id,
@@ -311,10 +342,22 @@ export class SyncService {
         id: row.id,
         title: row.title,
         cost: row.cost,
+        limitPerCycle: row.limit_per_cycle ?? 1,
         createdAt: new Date(row.created_at).getTime(),
         redeemedAt: row.redeemed_at ? new Date(row.redeemed_at).getTime() : undefined,
         updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : undefined
       };
+    }
+    if (table === 'redemptions') {
+      return {
+        id: row.id,
+        rewardId: row.reward_id,
+        rewardTitle: row.reward_title,
+        cost: row.cost,
+        redeemedAt: row.redeemed_at ? new Date(row.redeemed_at).getTime() : Date.now(),
+        date: row.date,
+        updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : undefined
+      } as RewardRedemption;
     }
     return {
       id: row.id,

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import Dexie, { Table } from 'dexie';
 
-type StoreName = 'tasks' | 'rewards' | 'completions' | 'settings';
+type StoreName = 'tasks' | 'rewards' | 'completions' | 'settings' | 'redemptions';
 
 type BaseRecord = {
   id: string;
@@ -16,8 +16,19 @@ export type Task = BaseRecord & {
 
 export type Reward = BaseRecord & {
   cost: number;
+  limitPerCycle: number;
   createdAt: number;
   redeemedAt?: number;
+  updatedAt?: number;
+};
+
+export type RewardRedemption = {
+  id: string;
+  rewardId: string;
+  rewardTitle: string;
+  cost: number;
+  redeemedAt: number;
+  date: string;
   updatedAt?: number;
 };
 
@@ -47,13 +58,14 @@ export type OutboxEntry = {
   entity: OutboxEntity;
   action: OutboxAction;
   recordId: string;
-  payload?: Task | Reward | Completion | Settings;
+  payload?: Task | Reward | Completion | Settings | RewardRedemption;
   createdAt: number;
 };
 
 class AllowanceDexie extends Dexie {
   tasks!: Table<Task, string>;
   rewards!: Table<Reward, string>;
+  redemptions!: Table<RewardRedemption, string>;
   completions!: Table<Completion, string>;
   settings!: Table<Settings, string>;
   outbox!: Table<OutboxEntry, number>;
@@ -63,6 +75,15 @@ class AllowanceDexie extends Dexie {
     this.version(1).stores({
       tasks: 'id,createdAt',
       rewards: 'id,createdAt,redeemedAt',
+      redemptions: 'id,rewardId,redeemedAt,date',
+      completions: 'id,taskId,date',
+      settings: 'id',
+      outbox: '++seq,createdAt,entity,action,recordId'
+    });
+    this.version(2).stores({
+      tasks: 'id,createdAt',
+      rewards: 'id,createdAt,redeemedAt',
+      redemptions: 'id,rewardId,redeemedAt,date',
       completions: 'id,taskId,date',
       settings: 'id',
       outbox: '++seq,createdAt,entity,action,recordId'
@@ -148,6 +169,21 @@ export class AllowanceDbService {
   async removeReward(id: string): Promise<void> {
     await this.remove('rewards', id);
     await this.enqueueOutbox('rewards', 'delete', id);
+  }
+
+  async getRedemptions(): Promise<RewardRedemption[]> {
+    return this.getAll<RewardRedemption>('redemptions');
+  }
+
+  async addRedemption(redemption: RewardRedemption): Promise<void> {
+    const next = { ...redemption, updatedAt: Date.now() };
+    await this.add('redemptions', next);
+    await this.enqueueOutbox('redemptions', 'upsert', next.id, next);
+  }
+
+  async removeRedemption(id: string): Promise<void> {
+    await this.remove('redemptions', id);
+    await this.enqueueOutbox('redemptions', 'delete', id);
   }
 
   async getSettings(): Promise<Settings | undefined> {
@@ -307,11 +343,40 @@ export class AllowanceDbService {
     }
   }
 
+  async migrateLegacyRewardRedemptions(): Promise<void> {
+    const rewards = await this.getAll<Reward>('rewards');
+    const redemptions = await this.getAll<RewardRedemption>('redemptions');
+    const existing = new Set(redemptions.map((entry) => `${entry.rewardId}-${entry.redeemedAt}`));
+    for (const reward of rewards) {
+      if (!reward.redeemedAt) {
+        continue;
+      }
+      const key = `${reward.id}-${reward.redeemedAt}`;
+      if (existing.has(key)) {
+        continue;
+      }
+      const redeemedAt = reward.redeemedAt;
+      const date = new Date(redeemedAt);
+      const redemption: RewardRedemption = {
+        id: this.createId(),
+        rewardId: reward.id,
+        rewardTitle: reward.title,
+        cost: reward.cost,
+        redeemedAt,
+        date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+          date.getDate()
+        ).padStart(2, '0')}`
+      };
+      await this.addRedemption(redemption);
+      existing.add(key);
+    }
+  }
+
   private async enqueueOutbox(
     entity: OutboxEntity,
     action: OutboxAction,
     recordId: string,
-    payload?: Task | Reward | Completion | Settings
+    payload?: Task | Reward | Completion | Settings | RewardRedemption
   ): Promise<void> {
     await this.db.outbox.add({
       entity,

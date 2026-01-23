@@ -41,12 +41,14 @@
     "name": "Recompensa",
     "placeholder": "Cinema",
     "cost": "Custo em XP",
+    "limitPerCycle": "Limite por ciclo",
     "add": "Adicionar recompensa",
     "empty": "Nenhuma recompensa cadastrada ainda.",
     "available": "Disponível",
     "redeemed": "Resgatada",
     "redeemedAt": "Resgatada em",
-    "redeemedEmpty": "Nenhuma recompensa resgatada ainda."
+    "redeemedEmpty": "Nenhuma recompensa resgatada ainda.",
+    "use": "Usar recompensa"
   },
   "settingsDialog": {
     "title": "Configurações",

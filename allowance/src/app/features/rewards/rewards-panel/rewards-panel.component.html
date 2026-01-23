@@ -35,9 +35,7 @@
             </button>
           </div>
           <span>{{ reward.cost }} XP</span>
-          <span class="status">
-            {{ 'rewards.available' | translate }}
-          </span>
+          <span class="status">{{ 'rewards.available' | translate }}</span>
           <button mat-icon-button class="danger" (click)="removeReward.emit(reward)">
             <span class="material-icons">delete</span>
           </button>
@@ -53,17 +51,22 @@
       @if (redeemedRewards.length === 0) {
         <p class="empty-state">{{ 'rewards.redeemedEmpty' | translate }}</p>
       }
-      @for (reward of pagedRedeemedRewards; track reward.id) {
+      @for (redemption of pagedRedeemedRewards; track redemption.id) {
         <div class="item-row">
           <div class="item-main">
-            <span class="item-title">{{ reward.title }}</span>
+            <span class="item-title">{{ redemption.rewardTitle }}</span>
           </div>
           <span class="redeemed-date">
-            {{ reward.redeemedAt ? (reward.redeemedAt | date:'shortDate') : '-' }}
+            {{ redemption.redeemedAt | date:'shortDate' }}
           </span>
-          <span>{{ reward.cost }} XP</span>
-          <button mat-icon-button class="danger" (click)="removeReward.emit(reward)">
-            <span class="material-icons">delete</span>
+          <span>{{ redemption.cost }} XP</span>
+          <button
+            mat-icon-button
+            color="primary"
+            (click)="consumeReward.emit(redemption)"
+            [attr.aria-label]="'rewards.use' | translate"
+          >
+            <span class="material-icons">check_circle</span>
           </button>
         </div>
       }

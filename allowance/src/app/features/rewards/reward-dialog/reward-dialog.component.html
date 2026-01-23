@@ -9,6 +9,10 @@
       <mat-label>{{ 'rewards.cost' | translate }}</mat-label>
       <input matInput type="number" formControlName="cost" min="1" />
     </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'rewards.limitPerCycle' | translate }}</mat-label>
+      <input matInput type="number" formControlName="limitPerCycle" min="1" />
+    </mat-form-field>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

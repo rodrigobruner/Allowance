@@ -17,9 +17,23 @@ create table if not exists public.rewards (
   owner_id uuid not null references auth.users (id) on delete cascade,
   title text not null,
   cost integer not null,
+  limit_per_cycle integer not null default 1,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   redeemed_at timestamptz,
+  deleted_at timestamptz
+);
+
+create table if not exists public.redemptions (
+  id uuid primary key,
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  reward_id uuid not null references public.rewards (id) on delete cascade,
+  reward_title text not null,
+  cost integer not null,
+  redeemed_at timestamptz not null default now(),
+  date date not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
 
@@ -67,6 +81,10 @@ create trigger rewards_touch_updated_at
 before update on public.rewards
 for each row execute function public.touch_updated_at();
 
+create trigger redemptions_touch_updated_at
+before update on public.redemptions
+for each row execute function public.touch_updated_at();
+
 create trigger completions_touch_updated_at
 before update on public.completions
 for each row execute function public.touch_updated_at();
@@ -77,6 +95,7 @@ for each row execute function public.touch_updated_at();
 
 alter table public.tasks enable row level security;
 alter table public.rewards enable row level security;
+alter table public.redemptions enable row level security;
 alter table public.completions enable row level security;
 alter table public.settings enable row level security;
 
@@ -106,6 +125,18 @@ with check (auth.uid() = owner_id);
 create policy "rewards_delete_own" on public.rewards
 for delete using (auth.uid() = owner_id);
 
+create policy "redemptions_read_own" on public.redemptions
+for select using (auth.uid() = owner_id);
+
+create policy "redemptions_write_own" on public.redemptions
+for insert with check (auth.uid() = owner_id);
+
+create policy "redemptions_update_own" on public.redemptions
+for update using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+create policy "redemptions_delete_own" on public.redemptions
+for delete using (auth.uid() = owner_id);
 create policy "completions_read_own" on public.completions
 for select using (auth.uid() = owner_id);
 
