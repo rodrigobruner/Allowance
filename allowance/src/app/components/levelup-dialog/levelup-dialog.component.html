@@ -1,7 +1,7 @@
 <div class="levelup">
   <h2 class="levelup-title">{{ 'levelUp.title' | translate }}</h2>
   <p class="levelup-subtitle">{{ 'levelUp.subtitle' | translate }}</p>
-  <video [src]="videoSrc" autoplay muted playsinline controls preload="auto"></video>
+  <video #levelupVideo [src]="videoSrc" autoplay playsinline controls preload="auto" (loadedmetadata)="setMaxVolume()"></video>
   <button class="close-button" mat-button (click)="close()">
     {{ 'levelUp.close' | translate }}
   </button>

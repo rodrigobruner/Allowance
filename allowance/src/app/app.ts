@@ -94,6 +94,9 @@ export class App implements OnInit {
 
   private resetDialogOpen = false;
   private errorDialogOpen = false;
+  private tasksSeeded = false;
+  private rewardsSeeded = false;
+  private isRefreshing = false;
   readonly isOnline = signal(navigator.onLine);
 
   constructor(
@@ -143,37 +146,17 @@ export class App implements OnInit {
         this.sync.syncAll();
       }
     });
+    effect(() => {
+      const lastSyncAt = this.sync.lastSyncAt();
+      if (!this.auth.isLoggedIn() || !lastSyncAt) {
+        return;
+      }
+      void this.refreshFromDb(true);
+    });
   }
 
   async ngOnInit(): Promise<void> {
-    const [tasks, rewards, completions, settings] = await Promise.all([
-      this.db.getTasks(),
-      this.db.getRewards(),
-      this.db.getCompletions(),
-      this.db.getSettings()
-    ]);
-    if (tasks.length === 0) {
-      const seeded = await this.seedDefaultTasks();
-      this.tasks.set(this.sortTasks(seeded));
-    } else {
-      this.tasks.set(this.sortTasks(tasks));
-    }
-    if (rewards.length === 0) {
-      const seededRewards = await this.seedDefaultRewards();
-      this.rewards.set(this.sortRewards(seededRewards));
-    } else {
-      this.rewards.set(this.sortRewards(rewards));
-    }
-    this.completions.set(completions);
-    if (settings) {
-      this.settings.set({
-        ...settings,
-        language: settings.language ?? 'en',
-        levelUpPoints: settings.levelUpPoints ?? 100,
-        avatarId: settings.avatarId ?? '01'
-      });
-    }
-    this.translate.use(this.settings().language);
+    await this.refreshFromDb(!this.auth.isLoggedIn());
   }
 
   async addTask(): Promise<void> {
@@ -310,6 +293,53 @@ export class App implements OnInit {
       height: '100vh',
       maxWidth: '100vw'
     });
+  }
+
+  private async refreshFromDb(seedIfEmpty: boolean): Promise<void> {
+    if (this.isRefreshing) {
+      return;
+    }
+    this.isRefreshing = true;
+    try {
+      const [tasks, rewards, completions, settings] = await Promise.all([
+        this.db.getTasks(),
+        this.db.getRewards(),
+        this.db.getCompletions(),
+        this.db.getSettings()
+      ]);
+      let didSeed = false;
+      if (tasks.length === 0 && seedIfEmpty && !this.tasksSeeded) {
+        const seeded = await this.seedDefaultTasks();
+        this.tasks.set(this.sortTasks(seeded));
+        this.tasksSeeded = true;
+        didSeed = true;
+      } else {
+        this.tasks.set(this.sortTasks(tasks));
+      }
+      if (rewards.length === 0 && seedIfEmpty && !this.rewardsSeeded) {
+        const seededRewards = await this.seedDefaultRewards();
+        this.rewards.set(this.sortRewards(seededRewards));
+        this.rewardsSeeded = true;
+        didSeed = true;
+      } else {
+        this.rewards.set(this.sortRewards(rewards));
+      }
+      this.completions.set(completions);
+      if (settings) {
+        this.settings.set({
+          ...settings,
+          language: settings.language ?? 'en',
+          levelUpPoints: settings.levelUpPoints ?? 100,
+          avatarId: settings.avatarId ?? '01'
+        });
+      }
+      this.translate.use(this.settings().language);
+      if (didSeed && this.auth.isLoggedIn() && this.isOnline()) {
+        await this.sync.syncAll();
+      }
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   cycleLabel(): string {
