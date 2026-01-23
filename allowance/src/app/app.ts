@@ -302,6 +302,9 @@ export class App implements OnInit {
 
   private showLevelUp(): void {
     this.dialog.open(LevelupDialogComponent, {
+      data: {
+        avatarId: this.settings().avatarId ?? '01'
+      },
       panelClass: 'levelup-dialog',
       width: '100vw',
       height: '100vh',

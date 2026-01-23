@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
@@ -62,6 +62,7 @@ import { TranslateModule } from '@ngx-translate/core';
 export class LevelupDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<LevelupDialogComponent>);
   private readonly document = inject(DOCUMENT);
+  private readonly data = inject<{ avatarId?: string }>(MAT_DIALOG_DATA, { optional: true });
 
   ngOnInit(): void {
     setTimeout(() => this.dialogRef.close(), 10000);
@@ -70,7 +71,8 @@ export class LevelupDialogComponent implements OnInit {
   get videoSrc(): string {
     const baseHref = this.document.querySelector('base')?.getAttribute('href') ?? '/';
     const normalized = baseHref.endsWith('/') ? baseHref : `${baseHref}/`;
-    return `${normalized}levelup.mov`;
+    const avatarId = this.data?.avatarId ?? '01';
+    return `${normalized}avatar/${avatarId}/levelup.mov`;
   }
 
   close(): void {
