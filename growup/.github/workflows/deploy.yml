@@ -51,4 +51,4 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           port: ${{ secrets.FTP_PORT }}
           local-dir: dist/growup/browser/
-          server-dir: /home/wisefire/growup.bruner.app/grow-up/
+          server-dir: /home/wisefire/growup.bruner.app/
