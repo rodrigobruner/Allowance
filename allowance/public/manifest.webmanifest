@@ -1,11 +1,11 @@
 {
-  "name": "Mesada",
-  "short_name": "Mesada",
+  "name": "Allowance",
+  "short_name": "Allowance",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f0e7",
   "theme_color": "#2f2a24",
-  "description": "Controle de mesada com tarefas e recompensas.",
+  "description": "Allowance control with chores and rewards.",
   "icons": [
     {
       "src": "/icon-192.svg",
