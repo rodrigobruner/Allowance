@@ -87,6 +87,8 @@ create table if not exists public.settings (
 create table if not exists public.account_settings (
   owner_id uuid primary key references auth.users (id) on delete cascade,
   language text not null check (language in ('en', 'pt', 'fr')),
+  terms_version text,
+  terms_accepted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

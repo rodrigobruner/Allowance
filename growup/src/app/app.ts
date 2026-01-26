@@ -29,6 +29,7 @@ import { LevelupDialogComponent } from './features/levelup/levelup-dialog/levelu
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { environment } from '../environments/environment';
 import { ProfileDialogComponent } from './features/profiles/profile-dialog/profile-dialog.component';
+import { TermsDialogComponent } from './features/auth/terms-dialog/terms-dialog.component';
 
 const currentDateKey = (): string => {
   const now = new Date();
@@ -55,6 +56,7 @@ const currentDateKey = (): string => {
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
+  private readonly termsVersion = '2026-01-26';
   tasks = signal<Task[]>([]);
   rewards = signal<Reward[]>([]);
   completions = signal<Completion[]>([]);
@@ -225,7 +227,62 @@ export class App implements OnInit {
     }
     this.db.setUser(userId);
     this.lastUserId = userId;
+    if (userId) {
+      const accepted = await this.ensureTermsAccepted(userId);
+      if (!accepted) {
+        await this.auth.signOut();
+        return;
+      }
+    }
     await this.refreshFromDb(!userId);
+  }
+
+  private async ensureTermsAccepted(userId: string): Promise<boolean> {
+    const supabase = this.auth.getClient();
+    const { data, error } = await supabase
+      .from('account_settings')
+      .select('terms_version, terms_accepted_at')
+      .eq('owner_id', userId)
+      .maybeSingle();
+    if (!error && data?.terms_version === this.termsVersion && data?.terms_accepted_at) {
+      return true;
+    }
+
+    const metadata = this.auth.user()?.user_metadata as Record<string, unknown> | null;
+    const metaVersion = typeof metadata?.['terms_version'] === 'string' ? metadata['terms_version'] : null;
+    const metaAcceptedAt =
+      typeof metadata?.['terms_accepted_at'] === 'string' ? metadata['terms_accepted_at'] : null;
+    if (metaVersion === this.termsVersion && metaAcceptedAt) {
+      const payload = {
+        owner_id: userId,
+        language: this.accountSettings().language ?? 'en',
+        terms_version: metaVersion,
+        terms_accepted_at: metaAcceptedAt
+      };
+      await supabase.from('account_settings').upsert(payload, { onConflict: 'owner_id' });
+      return true;
+    }
+
+    const accepted = await firstValueFrom(
+      this.dialog.open(TermsDialogComponent, {
+        panelClass: 'terms-dialog',
+        width: '100vw',
+        height: '100vh',
+        maxWidth: '100vw'
+      }).afterClosed()
+    );
+    if (!accepted) {
+      return false;
+    }
+
+    const payload = {
+      owner_id: userId,
+      language: this.accountSettings().language ?? 'en',
+      terms_version: this.termsVersion,
+      terms_accepted_at: new Date().toISOString()
+    };
+    await supabase.from('account_settings').upsert(payload, { onConflict: 'owner_id' });
+    return true;
   }
 
   async addTask(): Promise<void> {

@@ -402,7 +402,9 @@ export class SyncService {
   private toRemoteAccountSettings(settings: AccountSettings, ownerId: string): Record<string, unknown> {
     return {
       owner_id: ownerId,
-      language: settings.language
+      language: settings.language,
+      terms_version: settings.termsVersion ?? null,
+      terms_accepted_at: settings.termsAcceptedAt ? new Date(settings.termsAcceptedAt).toISOString() : null
     };
   }
 
@@ -506,6 +508,8 @@ export class SyncService {
     return {
       id: 'account',
       language: row.language,
+      termsVersion: row.terms_version ?? undefined,
+      termsAcceptedAt: row.terms_accepted_at ? new Date(row.terms_accepted_at).getTime() : undefined,
       updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : undefined
     };
   }

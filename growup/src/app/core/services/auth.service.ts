@@ -41,12 +41,22 @@ export class AuthService {
     return error ? { message: error.message } : null;
   }
 
-  async signUp(email: string, password: string, fullName?: string): Promise<AuthError | null> {
+  async signUp(
+    email: string,
+    password: string,
+    fullName?: string,
+    termsVersion?: string,
+    termsAcceptedAt?: string
+  ): Promise<AuthError | null> {
     const { error } = await this.supabase.auth.signUp({
       email,
       password,
       options: {
-        data: fullName ? { full_name: fullName } : undefined
+        data: {
+          ...(fullName ? { full_name: fullName } : {}),
+          ...(termsVersion ? { terms_version: termsVersion } : {}),
+          ...(termsAcceptedAt ? { terms_accepted_at: termsAcceptedAt } : {})
+        }
       }
     });
     return error ? { message: error.message } : null;
