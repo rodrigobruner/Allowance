@@ -47,7 +47,13 @@
           <mat-label>{{ 'auth.confirmPassword' | translate }}</mat-label>
           <input matInput type="password" [(ngModel)]="confirmPassword" autocomplete="new-password" />
         </mat-form-field>
-        <button mat-flat-button color="primary" (click)="signUp()" [disabled]="busy()">
+        <mat-checkbox [(ngModel)]="acceptTerms" class="terms-checkbox">
+          {{ 'auth.acceptTermsPrefix' | translate }}
+          <button type="button" class="terms-link" (click)="openTerms()">
+            {{ 'auth.termsLink' | translate }}
+          </button>
+        </mat-checkbox>
+        <button mat-flat-button color="primary" (click)="signUp()" [disabled]="busy() || !acceptTerms">
           {{ 'auth.signUp' | translate }}
         </button>
       </div>

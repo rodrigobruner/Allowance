@@ -28,6 +28,8 @@ erDiagram
   ACCOUNT_SETTINGS {
     uuid owner_id
     text language
+    text terms_version
+    timestamptz terms_accepted_at
     timestamptz created_at
     timestamptz updated_at
   }

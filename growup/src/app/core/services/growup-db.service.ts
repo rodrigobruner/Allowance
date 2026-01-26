@@ -65,6 +65,8 @@ export type Settings = {
 export type AccountSettings = {
   id: 'account';
   language: 'en' | 'pt' | 'fr';
+  termsVersion?: string;
+  termsAcceptedAt?: number;
   updatedAt?: number;
 };
 
@@ -142,6 +144,17 @@ export class GrowUpDbService {
     this.currentUserKey = nextKey;
     this.db.close();
     this.db = this.createDb(`growup-db-${nextKey}`);
+  }
+
+  async clearAnonymousDatabase(): Promise<void> {
+    try {
+      const anonDb = this.createDb('growup-db-anon');
+      await anonDb.outbox.clear();
+      anonDb.close();
+    } catch {
+      // Ignore cleanup failures; DB will be deleted next.
+    }
+    await Dexie.delete('growup-db-anon');
   }
 
   setActiveProfile(profileId: string | null): void {
