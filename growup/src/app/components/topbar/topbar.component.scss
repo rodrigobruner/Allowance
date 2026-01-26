@@ -169,7 +169,9 @@ button[mat-icon-button] {
   }
 
   .sync-status {
-    display: none;
+    display: flex;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
   }
 }
 
