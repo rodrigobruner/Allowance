@@ -531,19 +531,6 @@ export class App implements OnInit {
     if (!profile) {
       return;
     }
-    const confirmed = await firstValueFrom(
-      this.dialog.open(ConfirmDialogComponent, {
-        data: {
-          title: this.translate.instant('confirm.deleteProfileTitle'),
-          message: this.translate.instant('confirm.deleteProfileMessage', { name: profile.displayName }),
-          confirmLabel: this.translate.instant('confirm.confirm'),
-          cancelLabel: this.translate.instant('confirm.cancel')
-        }
-      }).afterClosed()
-    );
-    if (!confirmed) {
-      return;
-    }
 
     await this.db.removeProfileData(profileId);
     await this.db.removeProfile(profileId);
@@ -610,7 +597,7 @@ export class App implements OnInit {
       await this.db.migrateDefaultIds();
       await this.db.migrateLegacyRewardRedemptions();
 
-      const [profiles, accountSettings] = await Promise.all([
+      let [profiles, accountSettings] = await Promise.all([
         this.db.getProfiles(),
         this.db.getAccountSettings()
       ]);
@@ -629,6 +616,14 @@ export class App implements OnInit {
       const storedProfileId = localStorage.getItem('activeProfileId');
       if (!activeProfileId && storedProfileId && profiles.some((profile) => profile.id === storedProfileId)) {
         activeProfileId = storedProfileId;
+      }
+
+      if (!profiles.length && seedIfEmpty && this.auth.isLoggedIn() && this.isOnline()) {
+        await this.sync.syncAll();
+        [profiles, accountSettings] = await Promise.all([
+          this.db.getProfiles(),
+          this.db.getAccountSettings()
+        ]);
       }
 
       if (!profiles.length && seedIfEmpty) {

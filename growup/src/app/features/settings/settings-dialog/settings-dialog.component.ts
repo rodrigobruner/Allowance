@@ -189,8 +189,25 @@ export class SettingsDialogComponent implements OnChanges {
     this.selectProfile.emit(profileId);
   }
 
-  onDeleteProfile(profileId: string, event: MouseEvent): void {
+  async onDeleteProfile(profileId: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
+    const profile = this.profiles.find((item) => item.id === profileId);
+    if (!profile) {
+      return;
+    }
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: this.translateService.instant('confirm.deleteProfileTitle'),
+          message: this.translateService.instant('confirm.deleteProfileMessage', { name: profile.displayName }),
+          confirmLabel: this.translateService.instant('confirm.confirm'),
+          cancelLabel: this.translateService.instant('confirm.cancel')
+        }
+      }).afterClosed()
+    );
+    if (!confirmed) {
+      return;
+    }
     this.deleteProfile.emit(profileId);
   }
 
