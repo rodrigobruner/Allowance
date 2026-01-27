@@ -17,7 +17,9 @@ const targetPath = path.join(
   'environment.local.ts'
 );
 
-const contents = `export const environment = {
+const contents = `import type { Environment } from './environment.model';
+
+export const environment: Environment = {
   production: false,
   supabaseUrl: '${supabaseUrl}',
   supabaseAnonKey: '${supabaseAnonKey}',

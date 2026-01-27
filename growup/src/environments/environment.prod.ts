@@ -1,4 +1,6 @@
-export const environment = {
+import type { Environment } from './environment.model';
+
+export const environment: Environment = {
   production: true,
   supabaseUrl: 'CHANGE_ME_SUPABASE_URL',
   supabaseAnonKey: 'CHANGE_ME_SUPABASE_ANON_KEY',
